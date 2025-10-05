@@ -1,0 +1,1176 @@
+asyncapi: 2.0.0
+info:
+  title: DevPortfolio React - Realtime Events API
+  version: 1.0.0
+  description: Realtime events for the DevPortfolio React application
+servers:
+  development:
+    url: http://localhost:3000
+    protocol: ws
+channels:
+  /users/{user_id}:
+    parameters:
+      user_id:
+        schema:
+          type: string
+    subscribe:
+      summary: User related events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/UserUpdated"
+          - $ref: "#/components/messages/UserProfileUpdated"
+          - $ref: "#/components/messages/UserSocialLinksUpdated"
+          - $ref: "#/components/messages/UserThemeUpdated"
+  /users/{user_id}/projects:
+    parameters:
+      user_id:
+        schema:
+          type: string
+    subscribe:
+      summary: Project related events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/ProjectCreated"
+          - $ref: "#/components/messages/ProjectUpdated"
+          - $ref: "#/components/messages/ProjectDeleted"
+          - $ref: "#/components/messages/ProjectTechnologiesUpdated"
+          - $ref: "#/components/messages/ProjectImagesUpdated"
+          - $ref: "#/components/messages/ProjectLinksUpdated"
+  /users/{user_id}/skills:
+    parameters:
+      user_id:
+        schema:
+          type: string
+    subscribe:
+      summary: Skill related events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/SkillCreated"
+          - $ref: "#/components/messages/SkillUpdated"
+          - $ref: "#/components/messages/SkillDeleted"
+          - $ref: "#/components/messages/CertificationCreated"
+          - $ref: "#/components/messages/CertificationUpdated"
+          - $ref: "#/components/messages/CertificationDeleted"
+  /users/{user_id}/experience:
+    parameters:
+      user_id:
+        schema:
+          type: string
+    subscribe:
+      summary: Experience related events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/ExperienceCreated"
+          - $ref: "#/components/messages/ExperienceUpdated"
+          - $ref: "#/components/messages/ExperienceDeleted"
+          - $ref: "#/components/messages/ExperienceTechnologiesUpdated"
+  /users/{user_id}/education:
+    parameters:
+      user_id:
+        schema:
+          type: string
+    subscribe:
+      summary: Education related events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/EducationCreated"
+          - $ref: "#/components/messages/EducationUpdated"
+          - $ref: "#/components/messages/EducationDeleted"
+          - $ref: "#/components/messages/EducationCoursesUpdated"
+  /users/{user_id}/contact:
+    parameters:
+      user_id:
+        schema:
+          type: string
+    subscribe:
+      summary: Contact related events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/ContactSubmissionCreated"
+          - $ref: "#/components/messages/ContactFormSettingsUpdated"
+  /users/{user_id}/resume:
+    parameters:
+      user_id:
+        schema:
+          type: string
+    subscribe:
+      summary: Resume related events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/ResumeCreated"
+          - $ref: "#/components/messages/ResumeUpdated"
+          - $ref: "#/components/messages/ResumeDeleted"
+  /users/{user_id}/blog:
+    parameters:
+      user_id:
+        schema:
+          type: string
+    subscribe:
+      summary: Blog related events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/BlogPostCreated"
+          - $ref: "#/components/messages/BlogPostUpdated"
+          - $ref: "#/components/messages/BlogPostDeleted"
+          - $ref: "#/components/messages/BlogPostTagsUpdated"
+  /users/{user_id}/testimonials:
+    parameters:
+      user_id:
+        schema:
+          type: string
+    subscribe:
+      summary: Testimonial related events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/TestimonialCreated"
+          - $ref: "#/components/messages/TestimonialUpdated"
+          - $ref: "#/components/messages/TestimonialDeleted"
+  /portfolio/{user_id}/views:
+    parameters:
+      user_id:
+        schema:
+          type: string
+    subscribe:
+      summary: Portfolio view tracking events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/PortfolioViewCreated"
+  /global/state:
+    subscribe:
+      summary: Global state update events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/ActiveSectionUpdated"
+          - $ref: "#/components/messages/PortfolioFiltersUpdated"
+          - $ref: "#/components/messages/ContactFormStateChanged"
+          - $ref: "#/components/messages/SearchQueryUpdated"
+components:
+  messages:
+    UserUpdated:
+      summary: User profile updated
+      payload:
+        $ref: "#/components/schemas/User"
+    UserProfileUpdated:
+      summary: User profile details updated
+      payload:
+        $ref: "#/components/schemas/Profile"
+    UserSocialLinksUpdated:
+      summary: User social links updated
+      payload:
+        type: object
+        properties:
+          user_id:
+            type: string
+          social_links:
+            type: array
+            items:
+              $ref: "#/components/schemas/SocialLink"
+    UserThemeUpdated:
+      summary: User theme updated
+      payload:
+        $ref: "#/components/schemas/Theme"
+    ProjectCreated:
+      summary: New project created
+      payload:
+        $ref: "#/components/schemas/Project"
+    ProjectUpdated:
+      summary: Project updated
+      payload:
+        $ref: "#/components/schemas/Project"
+    ProjectDeleted:
+      summary: Project deleted
+      payload:
+        type: object
+        properties:
+          project_id:
+            type: string
+          user_id:
+            type: string
+    ProjectTechnologiesUpdated:
+      summary: Project technologies updated
+      payload:
+        type: object
+        properties:
+          project_id:
+            type: string
+          technologies:
+            type: array
+            items:
+              $ref: "#/components/schemas/ProjectTechnology"
+    ProjectImagesUpdated:
+      summary: Project images updated
+      payload:
+        type: object
+        properties:
+          project_id:
+            type: string
+          images:
+            type: array
+            items:
+              $ref: "#/components/schemas/ProjectImage"
+    ProjectLinksUpdated:
+      summary: Project links updated
+      payload:
+        type: object
+        properties:
+          project_id:
+            type: string
+          links:
+            type: array
+            items:
+              $ref: "#/components/schemas/ProjectLink"
+    SkillCreated:
+      summary: New skill created
+      payload:
+        $ref: "#/components/schemas/Skill"
+    SkillUpdated:
+      summary: Skill updated
+      payload:
+        $ref: "#/components/schemas/Skill"
+    SkillDeleted:
+      summary: Skill deleted
+      payload:
+        type: object
+        properties:
+          skill_id:
+            type: string
+          user_id:
+            type: string
+    CertificationCreated:
+      summary: New certification created
+      payload:
+        $ref: "#/components/schemas/Certification"
+    CertificationUpdated:
+      summary: Certification updated
+      payload:
+        $ref: "#/components/schemas/Certification"
+    CertificationDeleted:
+      summary: Certification deleted
+      payload:
+        type: object
+        properties:
+          certification_id:
+            type: string
+          user_id:
+            type: string
+    ExperienceCreated:
+      summary: New experience entry created
+      payload:
+        $ref: "#/components/schemas/Experience"
+    ExperienceUpdated:
+      summary: Experience entry updated
+      payload:
+        $ref: "#/components/schemas/Experience"
+    ExperienceDeleted:
+      summary: Experience entry deleted
+      payload:
+        type: object
+        properties:
+          experience_id:
+            type: string
+          user_id:
+            type: string
+    ExperienceTechnologiesUpdated:
+      summary: Experience technologies updated
+      payload:
+        type: object
+        properties:
+          experience_id:
+            type: string
+          technologies:
+            type: array
+            items:
+              $ref: "#/components/schemas/ExperienceTechnology"
+    EducationCreated:
+      summary: New education entry created
+      payload:
+        $ref: "#/components/schemas/Education"
+    EducationUpdated:
+      summary: Education entry updated
+      payload:
+        $ref: "#/components/schemas/Education"
+    EducationDeleted:
+      summary: Education entry deleted
+      payload:
+        type: object
+        properties:
+          education_id:
+            type: string
+          user_id:
+            type: string
+    EducationCoursesUpdated:
+      summary: Education courses updated
+      payload:
+        type: object
+        properties:
+          education_id:
+            type: string
+          courses:
+            type: array
+            items:
+              $ref: "#/components/schemas/EducationCourse"
+    ContactSubmissionCreated:
+      summary: New contact submission received
+      payload:
+        $ref: "#/components/schemas/ContactSubmission"
+    ContactFormSettingsUpdated:
+      summary: Contact form settings updated
+      payload:
+        $ref: "#/components/schemas/ContactFormSetting"
+    ResumeCreated:
+      summary: New resume uploaded
+      payload:
+        $ref: "#/components/schemas/Resume"
+    ResumeUpdated:
+      summary: Resume updated
+      payload:
+        $ref: "#/components/schemas/Resume"
+    ResumeDeleted:
+      summary: Resume deleted
+      payload:
+        type: object
+        properties:
+          resume_id:
+            type: string
+          user_id:
+            type: string
+    BlogPostCreated:
+      summary: New blog post created
+      payload:
+        $ref: "#/components/schemas/BlogPost"
+    BlogPostUpdated:
+      summary: Blog post updated
+      payload:
+        $ref: "#/components/schemas/BlogPost"
+    BlogPostDeleted:
+      summary: Blog post deleted
+      payload:
+        type: object
+        properties:
+          post_id:
+            type: string
+          user_id:
+            type: string
+    BlogPostTagsUpdated:
+      summary: Blog post tags updated
+      payload:
+        type: object
+        properties:
+          post_id:
+            type: string
+          tags:
+            type: array
+            items:
+              $ref: "#/components/schemas/BlogPostTag"
+    TestimonialCreated:
+      summary: New testimonial created
+      payload:
+        $ref: "#/components/schemas/Testimonial"
+    TestimonialUpdated:
+      summary: Testimonial updated
+      payload:
+        $ref: "#/components/schemas/Testimonial"
+    TestimonialDeleted:
+      summary: Testimonial deleted
+      payload:
+        type: object
+        properties:
+          testimonial_id:
+            type: string
+          user_id:
+            type: string
+    PortfolioViewCreated:
+      summary: New portfolio view recorded
+      payload:
+        $ref: "#/components/schemas/PortfolioView"
+    ActiveSectionUpdated:
+      summary: Active section updated
+      payload:
+        type: object
+        properties:
+          active_section:
+            type: string
+    PortfolioFiltersUpdated:
+      summary: Portfolio filters updated
+      payload:
+        $ref: "#/components/schemas/PortfolioFilters"
+    ContactFormStateChanged:
+      summary: Contact form state changed
+      payload:
+        $ref: "#/components/schemas/ContactFormState"
+    SearchQueryUpdated:
+      summary: Search query updated
+      payload:
+        type: object
+        properties:
+          search_query:
+            type: string
+  schemas:
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        title:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        headshot_url:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        availability_status:
+          type: string
+          nullable: true
+        remote_work_preference:
+          type: boolean
+          nullable: true
+        relocation_willingness:
+          type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - user_id
+        - email
+        - name
+        - created_at
+        - updated_at
+    Profile:
+      type: object
+      properties:
+        profile_id:
+          type: string
+        user_id:
+          type: string
+        tagline:
+          type: string
+          nullable: true
+        mission_statement:
+          type: string
+          nullable: true
+        years_of_experience:
+          type: integer
+          nullable: true
+        personal_interests:
+          type: string
+          nullable: true
+        professional_values:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - profile_id
+        - user_id
+        - created_at
+        - updated_at
+    SocialLink:
+      type: object
+      properties:
+        link_id:
+          type: string
+        user_id:
+          type: string
+        platform:
+          type: string
+        url:
+          type: string
+          format: uri
+        display_name:
+          type: string
+          nullable: true
+        icon_class:
+          type: string
+          nullable: true
+        is_verified:
+          type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - link_id
+        - user_id
+        - platform
+        - url
+        - created_at
+        - updated_at
+    Theme:
+      type: object
+      properties:
+        theme_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        primary_color:
+          type: string
+          nullable: true
+        secondary_color:
+          type: string
+          nullable: true
+        accent_color:
+          type: string
+          nullable: true
+        font_family:
+          type: string
+          nullable: true
+        layout_spacing:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - theme_id
+        - user_id
+        - name
+        - created_at
+        - updated_at
+    Project:
+      type: object
+      properties:
+        project_id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        short_description:
+          type: string
+          nullable: true
+        project_type:
+          type: string
+          nullable: true
+        client_name:
+          type: string
+          nullable: true
+        project_duration:
+          type: string
+          nullable: true
+        team_size:
+          type: integer
+          nullable: true
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        problem_statement:
+          type: string
+          nullable: true
+        solution_approach:
+          type: string
+          nullable: true
+        technical_challenges:
+          type: string
+          nullable: true
+        results:
+          type: string
+          nullable: true
+        lessons_learned:
+          type: string
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - project_id
+        - user_id
+        - title
+        - created_at
+        - updated_at
+    ProjectTechnology:
+      type: object
+      properties:
+        project_tech_id:
+          type: string
+        project_id:
+          type: string
+        technology_name:
+          type: string
+        category:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - project_tech_id
+        - project_id
+        - technology_name
+        - created_at
+    ProjectImage:
+      type: object
+      properties:
+        image_id:
+          type: string
+        project_id:
+          type: string
+        url:
+          type: string
+          format: uri
+        alt_text:
+          type: string
+          nullable: true
+        caption:
+          type: string
+          nullable: true
+        is_primary:
+          type: boolean
+          nullable: true
+        display_order:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - image_id
+        - project_id
+        - url
+        - created_at
+    ProjectLink:
+      type: object
+      properties:
+        link_id:
+          type: string
+        project_id:
+          type: string
+        link_type:
+          type: string
+        url:
+          type: string
+          format: uri
+        label:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - link_id
+        - project_id
+        - link_type
+        - url
+        - created_at
+    Skill:
+      type: object
+      properties:
+        skill_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          nullable: true
+        proficiency_level:
+          type: string
+          nullable: true
+        proficiency_percentage:
+          type: integer
+          nullable: true
+        years_of_experience:
+          type: integer
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - skill_id
+        - user_id
+        - name
+        - created_at
+        - updated_at
+    Certification:
+      type: object
+      properties:
+        certification_id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+        issuing_organization:
+          type: string
+        organization_logo_url:
+          type: string
+          nullable: true
+        issue_date:
+          type: string
+          nullable: true
+        expiration_date:
+          type: string
+          nullable: true
+        verification_url:
+          type: string
+          nullable: true
+        credential_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - certification_id
+        - user_id
+        - title
+        - issuing_organization
+        - created_at
+        - updated_at
+    Experience:
+      type: object
+      properties:
+        experience_id:
+          type: string
+        user_id:
+          type: string
+        job_title:
+          type: string
+        company_name:
+          type: string
+        company_logo_url:
+          type: string
+          nullable: true
+        employment_type:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+        end_date:
+          type: string
+          nullable: true
+        is_current:
+          type: boolean
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        achievements:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - experience_id
+        - user_id
+        - job_title
+        - company_name
+        - start_date
+        - created_at
+        - updated_at
+    ExperienceTechnology:
+      type: object
+      properties:
+        exp_tech_id:
+          type: string
+        experience_id:
+          type: string
+        technology_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - exp_tech_id
+        - experience_id
+        - technology_name
+        - created_at
+    Education:
+      type: object
+      properties:
+        education_id:
+          type: string
+        user_id:
+          type: string
+        degree_title:
+          type: string
+        institution_name:
+          type: string
+        institution_logo_url:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        is_current:
+          type: boolean
+          nullable: true
+        grade:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        honors:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - education_id
+        - user_id
+        - degree_title
+        - institution_name
+        - created_at
+        - updated_at
+    EducationCourse:
+      type: object
+      properties:
+        course_id:
+          type: string
+        education_id:
+          type: string
+        course_name:
+          type: string
+        course_code:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - course_id
+        - education_id
+        - course_name
+        - created_at
+    ContactSubmission:
+      type: object
+      properties:
+        submission_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        company:
+          type: string
+          nullable: true
+        subject:
+          type: string
+        message:
+          type: string
+        project_type:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - submission_id
+        - user_id
+        - name
+        - email
+        - subject
+        - message
+        - created_at
+        - updated_at
+    ContactFormSetting:
+      type: object
+      properties:
+        setting_id:
+          type: string
+        user_id:
+          type: string
+        enable_phone:
+          type: boolean
+          nullable: true
+        enable_company:
+          type: boolean
+          nullable: true
+        enable_project_type:
+          type: boolean
+          nullable: true
+        response_message:
+          type: string
+          nullable: true
+        notification_email:
+          type: string
+          format: email
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - setting_id
+        - user_id
+        - created_at
+        - updated_at
+    Resume:
+      type: object
+      properties:
+        resume_id:
+          type: string
+        user_id:
+          type: string
+        file_url:
+          type: string
+          format: uri
+        file_type:
+          type: string
+        version:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - resume_id
+        - user_id
+        - file_url
+        - file_type
+        - created_at
+        - updated_at
+    BlogPost:
+      type: object
+      properties:
+        post_id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        excerpt:
+          type: string
+          nullable: true
+        content:
+          type: string
+        featured_image_url:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        reading_time:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        published_at:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - post_id
+        - user_id
+        - title
+        - slug
+        - content
+        - status
+        - created_at
+        - updated_at
+    BlogPostTag:
+      type: object
+      properties:
+        tag_id:
+          type: string
+        post_id:
+          type: string
+        tag_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - tag_id
+        - post_id
+        - tag_name
+        - created_at
+    Testimonial:
+      type: object
+      properties:
+        testimonial_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        title:
+          type: string
+        company:
+          type: string
+          nullable: true
+        photo_url:
+          type: string
+          nullable: true
+        relationship:
+          type: string
+          nullable: true
+        content:
+          type: string
+        rating:
+          type: integer
+          nullable: true
+        date:
+          type: string
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - testimonial_id
+        - user_id
+        - name
+        - title
+        - content
+        - created_at
+        - updated_at
+    PortfolioView:
+      type: object
+      properties:
+        view_id:
+          type: string
+        user_id:
+          type: string
+        project_id:
+          type: string
+          nullable: true
+        post_id:
+          type: string
+          nullable: true
+        ip_address:
+          type: string
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - view_id
+        - user_id
+        - created_at
+    PortfolioFilters:
+      type: object
+      properties:
+        project_technologies:
+          type: array
+          items:
+            type: string
+        project_types:
+          type: array
+          items:
+            type: string
+        experience_types:
+          type: array
+          items:
+            type: string
+        skill_categories:
+          type: array
+          items:
+            type: string
+    ContactFormState:
+      type: object
+      properties:
+        is_submitting:
+          type: boolean
+        submission_status:
+          type: string
+          enum:
+            - idle
+            - success
+            - error
+        error_message:
+          type: string
+          nullable: true

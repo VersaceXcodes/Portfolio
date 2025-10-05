@@ -1,0 +1,19 @@
+{
+  "timestamp": 1759688433078,
+  "operation": {
+    "id": "webapp:react:views",
+    "refs": {
+      "id": "UV_ErrorPage",
+      "version": "1759688409425"
+    }
+  },
+  "projectId": "portfolio",
+  "files": [
+    {
+      "path": "/mnt/data/portfolio/vitereact/src/components/views/UV_ErrorPage.tsx",
+      "type": "text",
+      "size": 4798,
+      "dependencies": false
+    }
+  ]
+}

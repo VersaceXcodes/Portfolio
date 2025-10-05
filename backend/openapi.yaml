@@ -1,0 +1,4937 @@
+openapi: 3.0.0
+info:
+  title: DevPortfolio React API
+  description: Professional portfolio web application for React Native developers
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+        password_hash:
+          type: string
+        name:
+          type: string
+        title:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        headshot_url:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        availability_status:
+          type: string
+          nullable: true
+        remote_work_preference:
+          type: boolean
+          nullable: true
+        relocation_willingness:
+          type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - user_id
+        - email
+        - password_hash
+        - name
+        - created_at
+        - updated_at
+    CreateUserInput:
+      type: object
+      properties:
+        user_id:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password_hash:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          maxLength: 255
+        title:
+          type: string
+          maxLength: 255
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        headshot_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        location:
+          type: string
+          maxLength: 255
+          nullable: true
+        availability_status:
+          type: string
+          maxLength: 50
+          nullable: true
+        remote_work_preference:
+          type: boolean
+          nullable: true
+        relocation_willingness:
+          type: boolean
+          nullable: true
+      required:
+        - user_id
+        - email
+        - password_hash
+        - name
+    UpdateUserInput:
+      type: object
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password_hash:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          maxLength: 255
+        title:
+          type: string
+          maxLength: 255
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        headshot_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        location:
+          type: string
+          maxLength: 255
+          nullable: true
+        availability_status:
+          type: string
+          maxLength: 50
+          nullable: true
+        remote_work_preference:
+          type: boolean
+          nullable: true
+        relocation_willingness:
+          type: boolean
+          nullable: true
+      required:
+        - user_id
+    SearchUserInput:
+      type: object
+      properties:
+        query:
+          type: string
+        limit:
+          type: integer
+          minimum: 1
+          default: 10
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+        sort_by:
+          type: string
+          enum:
+            - user_id
+            - email
+            - name
+            - created_at
+            - updated_at
+          default: created_at
+        sort_order:
+          type: string
+          enum:
+            - asc
+            - desc
+          default: desc
+    Profile:
+      type: object
+      properties:
+        profile_id:
+          type: string
+        user_id:
+          type: string
+        tagline:
+          type: string
+          nullable: true
+        mission_statement:
+          type: string
+          nullable: true
+        years_of_experience:
+          type: integer
+          nullable: true
+        personal_interests:
+          type: string
+          nullable: true
+        professional_values:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - profile_id
+        - user_id
+        - created_at
+        - updated_at
+    CreateProfileInput:
+      type: object
+      properties:
+        profile_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        tagline:
+          type: string
+          maxLength: 255
+          nullable: true
+        mission_statement:
+          type: string
+          nullable: true
+        years_of_experience:
+          type: integer
+          nullable: true
+        personal_interests:
+          type: string
+          nullable: true
+        professional_values:
+          type: string
+          nullable: true
+      required:
+        - profile_id
+        - user_id
+    UpdateProfileInput:
+      type: object
+      properties:
+        profile_id:
+          type: string
+        user_id:
+          type: string
+        tagline:
+          type: string
+          maxLength: 255
+          nullable: true
+        mission_statement:
+          type: string
+          nullable: true
+        years_of_experience:
+          type: integer
+          nullable: true
+        personal_interests:
+          type: string
+          nullable: true
+        professional_values:
+          type: string
+          nullable: true
+      required:
+        - profile_id
+    SocialLink:
+      type: object
+      properties:
+        link_id:
+          type: string
+        user_id:
+          type: string
+        platform:
+          type: string
+        url:
+          type: string
+          format: uri
+        display_name:
+          type: string
+          nullable: true
+        icon_class:
+          type: string
+          nullable: true
+        is_verified:
+          type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - link_id
+        - user_id
+        - platform
+        - url
+        - created_at
+        - updated_at
+    CreateSocialLinkInput:
+      type: object
+      properties:
+        link_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        platform:
+          type: string
+          minLength: 1
+          maxLength: 100
+        url:
+          type: string
+          format: uri
+          maxLength: 255
+        display_name:
+          type: string
+          maxLength: 255
+          nullable: true
+        icon_class:
+          type: string
+          maxLength: 100
+          nullable: true
+        is_verified:
+          type: boolean
+          nullable: true
+      required:
+        - link_id
+        - user_id
+        - platform
+        - url
+    UpdateSocialLinkInput:
+      type: object
+      properties:
+        link_id:
+          type: string
+        user_id:
+          type: string
+        platform:
+          type: string
+          minLength: 1
+          maxLength: 100
+        url:
+          type: string
+          format: uri
+          maxLength: 255
+        display_name:
+          type: string
+          maxLength: 255
+          nullable: true
+        icon_class:
+          type: string
+          maxLength: 100
+          nullable: true
+        is_verified:
+          type: boolean
+          nullable: true
+      required:
+        - link_id
+    Project:
+      type: object
+      properties:
+        project_id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        short_description:
+          type: string
+          nullable: true
+        project_type:
+          type: string
+          nullable: true
+        client_name:
+          type: string
+          nullable: true
+        project_duration:
+          type: string
+          nullable: true
+        team_size:
+          type: integer
+          nullable: true
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        problem_statement:
+          type: string
+          nullable: true
+        solution_approach:
+          type: string
+          nullable: true
+        technical_challenges:
+          type: string
+          nullable: true
+        results:
+          type: string
+          nullable: true
+        lessons_learned:
+          type: string
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - project_id
+        - user_id
+        - title
+        - created_at
+        - updated_at
+    CreateProjectInput:
+      type: object
+      properties:
+        project_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        short_description:
+          type: string
+          nullable: true
+        project_type:
+          type: string
+          maxLength: 100
+          nullable: true
+        client_name:
+          type: string
+          maxLength: 255
+          nullable: true
+        project_duration:
+          type: string
+          maxLength: 100
+          nullable: true
+        team_size:
+          type: integer
+          nullable: true
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        problem_statement:
+          type: string
+          nullable: true
+        solution_approach:
+          type: string
+          nullable: true
+        technical_challenges:
+          type: string
+          nullable: true
+        results:
+          type: string
+          nullable: true
+        lessons_learned:
+          type: string
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+        status:
+          type: string
+          maxLength: 50
+          nullable: true
+      required:
+        - project_id
+        - user_id
+        - title
+    UpdateProjectInput:
+      type: object
+      properties:
+        project_id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        short_description:
+          type: string
+          nullable: true
+        project_type:
+          type: string
+          maxLength: 100
+          nullable: true
+        client_name:
+          type: string
+          maxLength: 255
+          nullable: true
+        project_duration:
+          type: string
+          maxLength: 100
+          nullable: true
+        team_size:
+          type: integer
+          nullable: true
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        problem_statement:
+          type: string
+          nullable: true
+        solution_approach:
+          type: string
+          nullable: true
+        technical_challenges:
+          type: string
+          nullable: true
+        results:
+          type: string
+          nullable: true
+        lessons_learned:
+          type: string
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+        status:
+          type: string
+          maxLength: 50
+          nullable: true
+      required:
+        - project_id
+    ProjectTechnology:
+      type: object
+      properties:
+        project_tech_id:
+          type: string
+        project_id:
+          type: string
+        technology_name:
+          type: string
+        category:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - project_tech_id
+        - project_id
+        - technology_name
+        - created_at
+    CreateProjectTechnologyInput:
+      type: object
+      properties:
+        project_tech_id:
+          type: string
+          maxLength: 255
+        project_id:
+          type: string
+          maxLength: 255
+        technology_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category:
+          type: string
+          maxLength: 100
+          nullable: true
+      required:
+        - project_tech_id
+        - project_id
+        - technology_name
+    UpdateProjectTechnologyInput:
+      type: object
+      properties:
+        project_tech_id:
+          type: string
+        project_id:
+          type: string
+        technology_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category:
+          type: string
+          maxLength: 100
+          nullable: true
+      required:
+        - project_tech_id
+    ProjectImage:
+      type: object
+      properties:
+        image_id:
+          type: string
+        project_id:
+          type: string
+        url:
+          type: string
+          format: uri
+        alt_text:
+          type: string
+          nullable: true
+        caption:
+          type: string
+          nullable: true
+        is_primary:
+          type: boolean
+          nullable: true
+        display_order:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - image_id
+        - project_id
+        - url
+        - created_at
+    CreateProjectImageInput:
+      type: object
+      properties:
+        image_id:
+          type: string
+          maxLength: 255
+        project_id:
+          type: string
+          maxLength: 255
+        url:
+          type: string
+          format: uri
+          maxLength: 255
+        alt_text:
+          type: string
+          maxLength: 255
+          nullable: true
+        caption:
+          type: string
+          nullable: true
+        is_primary:
+          type: boolean
+          nullable: true
+        display_order:
+          type: integer
+          nullable: true
+      required:
+        - image_id
+        - project_id
+        - url
+    UpdateProjectImageInput:
+      type: object
+      properties:
+        image_id:
+          type: string
+        project_id:
+          type: string
+        url:
+          type: string
+          format: uri
+          maxLength: 255
+        alt_text:
+          type: string
+          maxLength: 255
+          nullable: true
+        caption:
+          type: string
+          nullable: true
+        is_primary:
+          type: boolean
+          nullable: true
+        display_order:
+          type: integer
+          nullable: true
+      required:
+        - image_id
+    ProjectLink:
+      type: object
+      properties:
+        link_id:
+          type: string
+        project_id:
+          type: string
+        link_type:
+          type: string
+        url:
+          type: string
+          format: uri
+        label:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - link_id
+        - project_id
+        - link_type
+        - url
+        - created_at
+    CreateProjectLinkInput:
+      type: object
+      properties:
+        link_id:
+          type: string
+          maxLength: 255
+        project_id:
+          type: string
+          maxLength: 255
+        link_type:
+          type: string
+          minLength: 1
+          maxLength: 100
+        url:
+          type: string
+          format: uri
+          maxLength: 255
+        label:
+          type: string
+          maxLength: 255
+          nullable: true
+      required:
+        - link_id
+        - project_id
+        - link_type
+        - url
+    UpdateProjectLinkInput:
+      type: object
+      properties:
+        link_id:
+          type: string
+        project_id:
+          type: string
+        link_type:
+          type: string
+          minLength: 1
+          maxLength: 100
+        url:
+          type: string
+          format: uri
+          maxLength: 255
+        label:
+          type: string
+          maxLength: 255
+          nullable: true
+      required:
+        - link_id
+    Skill:
+      type: object
+      properties:
+        skill_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          nullable: true
+        proficiency_level:
+          type: string
+          nullable: true
+        proficiency_percentage:
+          type: integer
+          nullable: true
+        years_of_experience:
+          type: integer
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - skill_id
+        - user_id
+        - name
+        - created_at
+        - updated_at
+    CreateSkillInput:
+      type: object
+      properties:
+        skill_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category:
+          type: string
+          maxLength: 100
+          nullable: true
+        proficiency_level:
+          type: string
+          maxLength: 50
+          nullable: true
+        proficiency_percentage:
+          type: integer
+          nullable: true
+        years_of_experience:
+          type: integer
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+      required:
+        - skill_id
+        - user_id
+        - name
+    UpdateSkillInput:
+      type: object
+      properties:
+        skill_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category:
+          type: string
+          maxLength: 100
+          nullable: true
+        proficiency_level:
+          type: string
+          maxLength: 50
+          nullable: true
+        proficiency_percentage:
+          type: integer
+          nullable: true
+        years_of_experience:
+          type: integer
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+      required:
+        - skill_id
+    Certification:
+      type: object
+      properties:
+        certification_id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+        issuing_organization:
+          type: string
+        organization_logo_url:
+          type: string
+          nullable: true
+        issue_date:
+          type: string
+          nullable: true
+        expiration_date:
+          type: string
+          nullable: true
+        verification_url:
+          type: string
+          nullable: true
+        credential_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - certification_id
+        - user_id
+        - title
+        - issuing_organization
+        - created_at
+        - updated_at
+    CreateCertificationInput:
+      type: object
+      properties:
+        certification_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        issuing_organization:
+          type: string
+          minLength: 1
+          maxLength: 255
+        organization_logo_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        issue_date:
+          type: string
+          nullable: true
+        expiration_date:
+          type: string
+          nullable: true
+        verification_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        credential_id:
+          type: string
+          maxLength: 255
+          nullable: true
+      required:
+        - certification_id
+        - user_id
+        - title
+        - issuing_organization
+    UpdateCertificationInput:
+      type: object
+      properties:
+        certification_id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        issuing_organization:
+          type: string
+          minLength: 1
+          maxLength: 255
+        organization_logo_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        issue_date:
+          type: string
+          nullable: true
+        expiration_date:
+          type: string
+          nullable: true
+        verification_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        credential_id:
+          type: string
+          maxLength: 255
+          nullable: true
+      required:
+        - certification_id
+    Experience:
+      type: object
+      properties:
+        experience_id:
+          type: string
+        user_id:
+          type: string
+        job_title:
+          type: string
+        company_name:
+          type: string
+        company_logo_url:
+          type: string
+          nullable: true
+        employment_type:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+        end_date:
+          type: string
+          nullable: true
+        is_current:
+          type: boolean
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        achievements:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - experience_id
+        - user_id
+        - job_title
+        - company_name
+        - start_date
+        - created_at
+        - updated_at
+    CreateExperienceInput:
+      type: object
+      properties:
+        experience_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        job_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        company_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        company_logo_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        employment_type:
+          type: string
+          maxLength: 100
+          nullable: true
+        location:
+          type: string
+          maxLength: 255
+          nullable: true
+        start_date:
+          type: string
+        end_date:
+          type: string
+          nullable: true
+        is_current:
+          type: boolean
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        achievements:
+          type: string
+          nullable: true
+      required:
+        - experience_id
+        - user_id
+        - job_title
+        - company_name
+        - start_date
+    UpdateExperienceInput:
+      type: object
+      properties:
+        experience_id:
+          type: string
+        user_id:
+          type: string
+        job_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        company_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        company_logo_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        employment_type:
+          type: string
+          maxLength: 100
+          nullable: true
+        location:
+          type: string
+          maxLength: 255
+          nullable: true
+        start_date:
+          type: string
+        end_date:
+          type: string
+          nullable: true
+        is_current:
+          type: boolean
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        achievements:
+          type: string
+          nullable: true
+      required:
+        - experience_id
+    ExperienceTechnology:
+      type: object
+      properties:
+        exp_tech_id:
+          type: string
+        experience_id:
+          type: string
+        technology_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - exp_tech_id
+        - experience_id
+        - technology_name
+        - created_at
+    CreateExperienceTechnologyInput:
+      type: object
+      properties:
+        exp_tech_id:
+          type: string
+          maxLength: 255
+        experience_id:
+          type: string
+          maxLength: 255
+        technology_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+        - exp_tech_id
+        - experience_id
+        - technology_name
+    UpdateExperienceTechnologyInput:
+      type: object
+      properties:
+        exp_tech_id:
+          type: string
+        experience_id:
+          type: string
+        technology_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+        - exp_tech_id
+    Education:
+      type: object
+      properties:
+        education_id:
+          type: string
+        user_id:
+          type: string
+        degree_title:
+          type: string
+        institution_name:
+          type: string
+        institution_logo_url:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        is_current:
+          type: boolean
+          nullable: true
+        grade:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        honors:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - education_id
+        - user_id
+        - degree_title
+        - institution_name
+        - created_at
+        - updated_at
+    CreateEducationInput:
+      type: object
+      properties:
+        education_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        degree_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        institution_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        institution_logo_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        location:
+          type: string
+          maxLength: 255
+          nullable: true
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        is_current:
+          type: boolean
+          nullable: true
+        grade:
+          type: string
+          maxLength: 50
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        honors:
+          type: string
+          nullable: true
+      required:
+        - education_id
+        - user_id
+        - degree_title
+        - institution_name
+    UpdateEducationInput:
+      type: object
+      properties:
+        education_id:
+          type: string
+        user_id:
+          type: string
+        degree_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        institution_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        institution_logo_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        location:
+          type: string
+          maxLength: 255
+          nullable: true
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+        is_current:
+          type: boolean
+          nullable: true
+        grade:
+          type: string
+          maxLength: 50
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        honors:
+          type: string
+          nullable: true
+      required:
+        - education_id
+    EducationCourse:
+      type: object
+      properties:
+        course_id:
+          type: string
+        education_id:
+          type: string
+        course_name:
+          type: string
+        course_code:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - course_id
+        - education_id
+        - course_name
+        - created_at
+    CreateEducationCourseInput:
+      type: object
+      properties:
+        course_id:
+          type: string
+          maxLength: 255
+        education_id:
+          type: string
+          maxLength: 255
+        course_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        course_code:
+          type: string
+          maxLength: 100
+          nullable: true
+      required:
+        - course_id
+        - education_id
+        - course_name
+    UpdateEducationCourseInput:
+      type: object
+      properties:
+        course_id:
+          type: string
+        education_id:
+          type: string
+        course_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        course_code:
+          type: string
+          maxLength: 100
+          nullable: true
+      required:
+        - course_id
+    ContactSubmission:
+      type: object
+      properties:
+        submission_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        company:
+          type: string
+          nullable: true
+        subject:
+          type: string
+        message:
+          type: string
+        project_type:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - submission_id
+        - user_id
+        - name
+        - email
+        - subject
+        - message
+        - created_at
+        - updated_at
+    CreateContactSubmissionInput:
+      type: object
+      properties:
+        submission_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        phone:
+          type: string
+          maxLength: 50
+          nullable: true
+        company:
+          type: string
+          maxLength: 255
+          nullable: true
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 255
+        message:
+          type: string
+        project_type:
+          type: string
+          maxLength: 100
+          nullable: true
+        status:
+          type: string
+          maxLength: 50
+          nullable: true
+      required:
+        - submission_id
+        - user_id
+        - name
+        - email
+        - subject
+        - message
+    UpdateContactSubmissionInput:
+      type: object
+      properties:
+        submission_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        phone:
+          type: string
+          maxLength: 50
+          nullable: true
+        company:
+          type: string
+          maxLength: 255
+          nullable: true
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 255
+        message:
+          type: string
+        project_type:
+          type: string
+          maxLength: 100
+          nullable: true
+        status:
+          type: string
+          maxLength: 50
+          nullable: true
+      required:
+        - submission_id
+    Resume:
+      type: object
+      properties:
+        resume_id:
+          type: string
+        user_id:
+          type: string
+        file_url:
+          type: string
+          format: uri
+        file_type:
+          type: string
+        version:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - resume_id
+        - user_id
+        - file_url
+        - file_type
+        - created_at
+        - updated_at
+    CreateResumeInput:
+      type: object
+      properties:
+        resume_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        file_url:
+          type: string
+          format: uri
+          maxLength: 255
+        file_type:
+          type: string
+          minLength: 1
+          maxLength: 50
+        version:
+          type: string
+          maxLength: 50
+          nullable: true
+      required:
+        - resume_id
+        - user_id
+        - file_url
+        - file_type
+    UpdateResumeInput:
+      type: object
+      properties:
+        resume_id:
+          type: string
+        user_id:
+          type: string
+        file_url:
+          type: string
+          format: uri
+          maxLength: 255
+        file_type:
+          type: string
+          minLength: 1
+          maxLength: 50
+        version:
+          type: string
+          maxLength: 50
+          nullable: true
+      required:
+        - resume_id
+    BlogPost:
+      type: object
+      properties:
+        post_id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        excerpt:
+          type: string
+          nullable: true
+        content:
+          type: string
+        featured_image_url:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        reading_time:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        published_at:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - post_id
+        - user_id
+        - title
+        - slug
+        - content
+        - status
+        - created_at
+        - updated_at
+    CreateBlogPostInput:
+      type: object
+      properties:
+        post_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+        excerpt:
+          type: string
+          nullable: true
+        content:
+          type: string
+        featured_image_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        category:
+          type: string
+          maxLength: 100
+          nullable: true
+        reading_time:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          minLength: 1
+          maxLength: 50
+        published_at:
+          type: string
+          nullable: true
+      required:
+        - post_id
+        - user_id
+        - title
+        - slug
+        - content
+        - status
+    UpdateBlogPostInput:
+      type: object
+      properties:
+        post_id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+        excerpt:
+          type: string
+          nullable: true
+        content:
+          type: string
+        featured_image_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        category:
+          type: string
+          maxLength: 100
+          nullable: true
+        reading_time:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          minLength: 1
+          maxLength: 50
+        published_at:
+          type: string
+          nullable: true
+      required:
+        - post_id
+    BlogPostTag:
+      type: object
+      properties:
+        tag_id:
+          type: string
+        post_id:
+          type: string
+        tag_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - tag_id
+        - post_id
+        - tag_name
+        - created_at
+    CreateBlogPostTagInput:
+      type: object
+      properties:
+        tag_id:
+          type: string
+          maxLength: 255
+        post_id:
+          type: string
+          maxLength: 255
+        tag_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+        - tag_id
+        - post_id
+        - tag_name
+    UpdateBlogPostTagInput:
+      type: object
+      properties:
+        tag_id:
+          type: string
+        post_id:
+          type: string
+        tag_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+        - tag_id
+    Testimonial:
+      type: object
+      properties:
+        testimonial_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        title:
+          type: string
+        company:
+          type: string
+          nullable: true
+        photo_url:
+          type: string
+          nullable: true
+        relationship:
+          type: string
+          nullable: true
+        content:
+          type: string
+        rating:
+          type: integer
+          nullable: true
+        date:
+          type: string
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - testimonial_id
+        - user_id
+        - name
+        - title
+        - content
+        - created_at
+        - updated_at
+    CreateTestimonialInput:
+      type: object
+      properties:
+        testimonial_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        company:
+          type: string
+          maxLength: 255
+          nullable: true
+        photo_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        relationship:
+          type: string
+          maxLength: 255
+          nullable: true
+        content:
+          type: string
+        rating:
+          type: integer
+          nullable: true
+        date:
+          type: string
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+      required:
+        - testimonial_id
+        - user_id
+        - name
+        - title
+        - content
+    UpdateTestimonialInput:
+      type: object
+      properties:
+        testimonial_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        company:
+          type: string
+          maxLength: 255
+          nullable: true
+        photo_url:
+          type: string
+          maxLength: 255
+          nullable: true
+        relationship:
+          type: string
+          maxLength: 255
+          nullable: true
+        content:
+          type: string
+        rating:
+          type: integer
+          nullable: true
+        date:
+          type: string
+          nullable: true
+        is_featured:
+          type: boolean
+          nullable: true
+      required:
+        - testimonial_id
+    Theme:
+      type: object
+      properties:
+        theme_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        primary_color:
+          type: string
+          nullable: true
+        secondary_color:
+          type: string
+          nullable: true
+        accent_color:
+          type: string
+          nullable: true
+        font_family:
+          type: string
+          nullable: true
+        layout_spacing:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - theme_id
+        - user_id
+        - name
+        - created_at
+        - updated_at
+    CreateThemeInput:
+      type: object
+      properties:
+        theme_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        primary_color:
+          type: string
+          maxLength: 50
+          nullable: true
+        secondary_color:
+          type: string
+          maxLength: 50
+          nullable: true
+        accent_color:
+          type: string
+          maxLength: 50
+          nullable: true
+        font_family:
+          type: string
+          maxLength: 100
+          nullable: true
+        layout_spacing:
+          type: string
+          maxLength: 50
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+      required:
+        - theme_id
+        - user_id
+        - name
+    UpdateThemeInput:
+      type: object
+      properties:
+        theme_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        primary_color:
+          type: string
+          maxLength: 50
+          nullable: true
+        secondary_color:
+          type: string
+          maxLength: 50
+          nullable: true
+        accent_color:
+          type: string
+          maxLength: 50
+          nullable: true
+        font_family:
+          type: string
+          maxLength: 100
+          nullable: true
+        layout_spacing:
+          type: string
+          maxLength: 50
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+      required:
+        - theme_id
+    PortfolioView:
+      type: object
+      properties:
+        view_id:
+          type: string
+        user_id:
+          type: string
+        project_id:
+          type: string
+          nullable: true
+        post_id:
+          type: string
+          nullable: true
+        ip_address:
+          type: string
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - view_id
+        - user_id
+        - created_at
+    CreatePortfolioViewInput:
+      type: object
+      properties:
+        view_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        project_id:
+          type: string
+          maxLength: 255
+          nullable: true
+        post_id:
+          type: string
+          maxLength: 255
+          nullable: true
+        ip_address:
+          type: string
+          maxLength: 50
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true
+      required:
+        - view_id
+        - user_id
+    UpdatePortfolioViewInput:
+      type: object
+      properties:
+        view_id:
+          type: string
+        user_id:
+          type: string
+        project_id:
+          type: string
+          maxLength: 255
+          nullable: true
+        post_id:
+          type: string
+          maxLength: 255
+          nullable: true
+        ip_address:
+          type: string
+          maxLength: 50
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true
+      required:
+        - view_id
+    ContactFormSetting:
+      type: object
+      properties:
+        setting_id:
+          type: string
+        user_id:
+          type: string
+        enable_phone:
+          type: boolean
+          nullable: true
+        enable_company:
+          type: boolean
+          nullable: true
+        enable_project_type:
+          type: boolean
+          nullable: true
+        response_message:
+          type: string
+          nullable: true
+        notification_email:
+          type: string
+          format: email
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - setting_id
+        - user_id
+        - created_at
+        - updated_at
+    CreateContactFormSettingInput:
+      type: object
+      properties:
+        setting_id:
+          type: string
+          maxLength: 255
+        user_id:
+          type: string
+          maxLength: 255
+        enable_phone:
+          type: boolean
+          nullable: true
+        enable_company:
+          type: boolean
+          nullable: true
+        enable_project_type:
+          type: boolean
+          nullable: true
+        response_message:
+          type: string
+          nullable: true
+        notification_email:
+          type: string
+          format: email
+          maxLength: 255
+          nullable: true
+      required:
+        - setting_id
+        - user_id
+    UpdateContactFormSettingInput:
+      type: object
+      properties:
+        setting_id:
+          type: string
+        user_id:
+          type: string
+        enable_phone:
+          type: boolean
+          nullable: true
+        enable_company:
+          type: boolean
+          nullable: true
+        enable_project_type:
+          type: boolean
+          nullable: true
+        response_message:
+          type: string
+          nullable: true
+        notification_email:
+          type: string
+          format: email
+          maxLength: 255
+          nullable: true
+      required:
+        - setting_id
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+    PortfolioFilters:
+      type: object
+      properties:
+        project_technologies:
+          type: array
+          items:
+            type: string
+        project_types:
+          type: array
+          items:
+            type: string
+        experience_types:
+          type: array
+          items:
+            type: string
+        skill_categories:
+          type: array
+          items:
+            type: string
+      required:
+        - project_technologies
+        - project_types
+        - experience_types
+        - skill_categories
+    ContactFormState:
+      type: object
+      properties:
+        is_submitting:
+          type: boolean
+        submission_status:
+          type: string
+          enum:
+            - idle
+            - success
+            - error
+        error_message:
+          type: string
+          nullable: true
+      required:
+        - is_submitting
+        - submission_status
+        - error_message
+    CurrentTheme:
+      type: object
+      properties:
+        primary_color:
+          type: string
+        secondary_color:
+          type: string
+        accent_color:
+          type: string
+        font_family:
+          type: string
+        layout_spacing:
+          type: string
+      required:
+        - primary_color
+        - secondary_color
+        - accent_color
+        - font_family
+        - layout_spacing
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserInput"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+        "409":
+          description: User already exists
+      security: []
+  /auth/login:
+    post:
+      summary: Login user
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+        "404":
+          description: User not found
+      security: []
+  /users/{user_id}:
+    get:
+      summary: Get user by ID
+      operationId: getUser
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: User not found
+    put:
+      summary: Update user
+      operationId: updateUser
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserInput"
+      responses:
+        "200":
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Bad request
+        "404":
+          description: User not found
+    delete:
+      summary: Delete user
+      operationId: deleteUser
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: User deleted successfully
+        "404":
+          description: User not found
+  /users:
+    get:
+      summary: Search users
+      operationId: searchUsers
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - user_id
+              - email
+              - name
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+  /profiles/{profile_id}:
+    get:
+      summary: Get profile by ID
+      operationId: getProfile
+      parameters:
+        - name: profile_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "404":
+          description: Profile not found
+    put:
+      summary: Update profile
+      operationId: updateProfile
+      parameters:
+        - name: profile_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileInput"
+      responses:
+        "200":
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Bad request
+        "404":
+          description: Profile not found
+    delete:
+      summary: Delete profile
+      operationId: deleteProfile
+      parameters:
+        - name: profile_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Profile deleted successfully
+        "404":
+          description: Profile not found
+  /profiles:
+    post:
+      summary: Create profile
+      operationId: createProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProfileInput"
+      responses:
+        "201":
+          description: Profile created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Bad request
+    get:
+      summary: Search profiles
+      operationId: searchProfiles
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - profile_id
+              - user_id
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Profiles retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Profile"
+  /social-links/{link_id}:
+    get:
+      summary: Get social link by ID
+      operationId: getSocialLink
+      parameters:
+        - name: link_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Social link retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialLink"
+        "404":
+          description: Social link not found
+    put:
+      summary: Update social link
+      operationId: updateSocialLink
+      parameters:
+        - name: link_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSocialLinkInput"
+      responses:
+        "200":
+          description: Social link updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialLink"
+        "400":
+          description: Bad request
+        "404":
+          description: Social link not found
+    delete:
+      summary: Delete social link
+      operationId: deleteSocialLink
+      parameters:
+        - name: link_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Social link deleted successfully
+        "404":
+          description: Social link not found
+  /social-links:
+    post:
+      summary: Create social link
+      operationId: createSocialLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSocialLinkInput"
+      responses:
+        "201":
+          description: Social link created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialLink"
+        "400":
+          description: Bad request
+    get:
+      summary: Search social links
+      operationId: searchSocialLinks
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - link_id
+              - user_id
+              - platform
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Social links retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SocialLink"
+  /projects/{project_id}:
+    get:
+      summary: Get project by ID
+      operationId: getProject
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          description: Project not found
+    put:
+      summary: Update project
+      operationId: updateProject
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectInput"
+      responses:
+        "200":
+          description: Project updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Bad request
+        "404":
+          description: Project not found
+    delete:
+      summary: Delete project
+      operationId: deleteProject
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Project deleted successfully
+        "404":
+          description: Project not found
+  /projects:
+    post:
+      summary: Create project
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectInput"
+      responses:
+        "201":
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Bad request
+    get:
+      summary: Search projects
+      operationId: searchProjects
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: technologies
+          in: query
+          schema:
+            type: string
+        - name: project_types
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - project_id
+              - user_id
+              - title
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Projects retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+  /project-technologies/{project_tech_id}:
+    get:
+      summary: Get project technology by ID
+      operationId: getProjectTechnology
+      parameters:
+        - name: project_tech_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project technology retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTechnology"
+        "404":
+          description: Project technology not found
+    put:
+      summary: Update project technology
+      operationId: updateProjectTechnology
+      parameters:
+        - name: project_tech_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectTechnologyInput"
+      responses:
+        "200":
+          description: Project technology updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTechnology"
+        "400":
+          description: Bad request
+        "404":
+          description: Project technology not found
+    delete:
+      summary: Delete project technology
+      operationId: deleteProjectTechnology
+      parameters:
+        - name: project_tech_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Project technology deleted successfully
+        "404":
+          description: Project technology not found
+  /project-technologies:
+    post:
+      summary: Create project technology
+      operationId: createProjectTechnology
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectTechnologyInput"
+      responses:
+        "201":
+          description: Project technology created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTechnology"
+        "400":
+          description: Bad request
+    get:
+      summary: Search project technologies
+      operationId: searchProjectTechnologies
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - project_tech_id
+              - project_id
+              - technology_name
+              - created_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Project technologies retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProjectTechnology"
+  /project-images/{image_id}:
+    get:
+      summary: Get project image by ID
+      operationId: getProjectImage
+      parameters:
+        - name: image_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project image retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectImage"
+        "404":
+          description: Project image not found
+    put:
+      summary: Update project image
+      operationId: updateProjectImage
+      parameters:
+        - name: image_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectImageInput"
+      responses:
+        "200":
+          description: Project image updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectImage"
+        "400":
+          description: Bad request
+        "404":
+          description: Project image not found
+    delete:
+      summary: Delete project image
+      operationId: deleteProjectImage
+      parameters:
+        - name: image_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Project image deleted successfully
+        "404":
+          description: Project image not found
+  /project-images:
+    post:
+      summary: Create project image
+      operationId: createProjectImage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectImageInput"
+      responses:
+        "201":
+          description: Project image created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectImage"
+        "400":
+          description: Bad request
+    get:
+      summary: Search project images
+      operationId: searchProjectImages
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - image_id
+              - project_id
+              - created_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Project images retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProjectImage"
+  /project-links/{link_id}:
+    get:
+      summary: Get project link by ID
+      operationId: getProjectLink
+      parameters:
+        - name: link_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project link retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectLink"
+        "404":
+          description: Project link not found
+    put:
+      summary: Update project link
+      operationId: updateProjectLink
+      parameters:
+        - name: link_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectLinkInput"
+      responses:
+        "200":
+          description: Project link updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectLink"
+        "400":
+          description: Bad request
+        "404":
+          description: Project link not found
+    delete:
+      summary: Delete project link
+      operationId: deleteProjectLink
+      parameters:
+        - name: link_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Project link deleted successfully
+        "404":
+          description: Project link not found
+  /project-links:
+    post:
+      summary: Create project link
+      operationId: createProjectLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectLinkInput"
+      responses:
+        "201":
+          description: Project link created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectLink"
+        "400":
+          description: Bad request
+    get:
+      summary: Search project links
+      operationId: searchProjectLinks
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - link_id
+              - project_id
+              - link_type
+              - created_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Project links retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProjectLink"
+  /skills/{skill_id}:
+    get:
+      summary: Get skill by ID
+      operationId: getSkill
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Skill retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Skill"
+        "404":
+          description: Skill not found
+    put:
+      summary: Update skill
+      operationId: updateSkill
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSkillInput"
+      responses:
+        "200":
+          description: Skill updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Skill"
+        "400":
+          description: Bad request
+        "404":
+          description: Skill not found
+    delete:
+      summary: Delete skill
+      operationId: deleteSkill
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Skill deleted successfully
+        "404":
+          description: Skill not found
+  /skills:
+    post:
+      summary: Create skill
+      operationId: createSkill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSkillInput"
+      responses:
+        "201":
+          description: Skill created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Skill"
+        "400":
+          description: Bad request
+    get:
+      summary: Search skills
+      operationId: searchSkills
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: categories
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - skill_id
+              - user_id
+              - name
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Skills retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Skill"
+  /certifications/{certification_id}:
+    get:
+      summary: Get certification by ID
+      operationId: getCertification
+      parameters:
+        - name: certification_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Certification retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Certification"
+        "404":
+          description: Certification not found
+    put:
+      summary: Update certification
+      operationId: updateCertification
+      parameters:
+        - name: certification_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCertificationInput"
+      responses:
+        "200":
+          description: Certification updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Certification"
+        "400":
+          description: Bad request
+        "404":
+          description: Certification not found
+    delete:
+      summary: Delete certification
+      operationId: deleteCertification
+      parameters:
+        - name: certification_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Certification deleted successfully
+        "404":
+          description: Certification not found
+  /certifications:
+    post:
+      summary: Create certification
+      operationId: createCertification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCertificationInput"
+      responses:
+        "201":
+          description: Certification created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Certification"
+        "400":
+          description: Bad request
+    get:
+      summary: Search certifications
+      operationId: searchCertifications
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - certification_id
+              - user_id
+              - title
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Certifications retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Certification"
+  /experiences/{experience_id}:
+    get:
+      summary: Get experience by ID
+      operationId: getExperience
+      parameters:
+        - name: experience_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Experience retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Experience"
+        "404":
+          description: Experience not found
+    put:
+      summary: Update experience
+      operationId: updateExperience
+      parameters:
+        - name: experience_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExperienceInput"
+      responses:
+        "200":
+          description: Experience updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Experience"
+        "400":
+          description: Bad request
+        "404":
+          description: Experience not found
+    delete:
+      summary: Delete experience
+      operationId: deleteExperience
+      parameters:
+        - name: experience_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Experience deleted successfully
+        "404":
+          description: Experience not found
+  /experiences:
+    post:
+      summary: Create experience
+      operationId: createExperience
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExperienceInput"
+      responses:
+        "201":
+          description: Experience created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Experience"
+        "400":
+          description: Bad request
+    get:
+      summary: Search experiences
+      operationId: searchExperiences
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: employment_types
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - experience_id
+              - user_id
+              - job_title
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Experiences retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Experience"
+  /experience-technologies/{exp_tech_id}:
+    get:
+      summary: Get experience technology by ID
+      operationId: getExperienceTechnology
+      parameters:
+        - name: exp_tech_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Experience technology retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExperienceTechnology"
+        "404":
+          description: Experience technology not found
+    put:
+      summary: Update experience technology
+      operationId: updateExperienceTechnology
+      parameters:
+        - name: exp_tech_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExperienceTechnologyInput"
+      responses:
+        "200":
+          description: Experience technology updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExperienceTechnology"
+        "400":
+          description: Bad request
+        "404":
+          description: Experience technology not found
+    delete:
+      summary: Delete experience technology
+      operationId: deleteExperienceTechnology
+      parameters:
+        - name: exp_tech_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Experience technology deleted successfully
+        "404":
+          description: Experience technology not found
+  /experience-technologies:
+    post:
+      summary: Create experience technology
+      operationId: createExperienceTechnology
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExperienceTechnologyInput"
+      responses:
+        "201":
+          description: Experience technology created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExperienceTechnology"
+        "400":
+          description: Bad request
+    get:
+      summary: Search experience technologies
+      operationId: searchExperienceTechnologies
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - exp_tech_id
+              - experience_id
+              - technology_name
+              - created_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Experience technologies retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExperienceTechnology"
+  /education/{education_id}:
+    get:
+      summary: Get education by ID
+      operationId: getEducation
+      parameters:
+        - name: education_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Education retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Education"
+        "404":
+          description: Education not found
+    put:
+      summary: Update education
+      operationId: updateEducation
+      parameters:
+        - name: education_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEducationInput"
+      responses:
+        "200":
+          description: Education updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Education"
+        "400":
+          description: Bad request
+        "404":
+          description: Education not found
+    delete:
+      summary: Delete education
+      operationId: deleteEducation
+      parameters:
+        - name: education_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Education deleted successfully
+        "404":
+          description: Education not found
+  /education:
+    post:
+      summary: Create education
+      operationId: createEducation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEducationInput"
+      responses:
+        "201":
+          description: Education created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Education"
+        "400":
+          description: Bad request
+    get:
+      summary: Search education
+      operationId: searchEducation
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - education_id
+              - user_id
+              - degree_title
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Education records retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Education"
+  /education-courses/{course_id}:
+    get:
+      summary: Get education course by ID
+      operationId: getEducationCourse
+      parameters:
+        - name: course_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Education course retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EducationCourse"
+        "404":
+          description: Education course not found
+    put:
+      summary: Update education course
+      operationId: updateEducationCourse
+      parameters:
+        - name: course_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEducationCourseInput"
+      responses:
+        "200":
+          description: Education course updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EducationCourse"
+        "400":
+          description: Bad request
+        "404":
+          description: Education course not found
+    delete:
+      summary: Delete education course
+      operationId: deleteEducationCourse
+      parameters:
+        - name: course_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Education course deleted successfully
+        "404":
+          description: Education course not found
+  /education-courses:
+    post:
+      summary: Create education course
+      operationId: createEducationCourse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEducationCourseInput"
+      responses:
+        "201":
+          description: Education course created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EducationCourse"
+        "400":
+          description: Bad request
+    get:
+      summary: Search education courses
+      operationId: searchEducationCourses
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - course_id
+              - education_id
+              - course_name
+              - created_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Education courses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EducationCourse"
+  /contact-submissions/{submission_id}:
+    get:
+      summary: Get contact submission by ID
+      operationId: getContactSubmission
+      parameters:
+        - name: submission_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Contact submission retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactSubmission"
+        "404":
+          description: Contact submission not found
+    put:
+      summary: Update contact submission
+      operationId: updateContactSubmission
+      parameters:
+        - name: submission_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContactSubmissionInput"
+      responses:
+        "200":
+          description: Contact submission updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactSubmission"
+        "400":
+          description: Bad request
+        "404":
+          description: Contact submission not found
+    delete:
+      summary: Delete contact submission
+      operationId: deleteContactSubmission
+      parameters:
+        - name: submission_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Contact submission deleted successfully
+        "404":
+          description: Contact submission not found
+  /contact-submissions:
+    post:
+      summary: Create contact submission
+      operationId: createContactSubmission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContactSubmissionInput"
+      responses:
+        "201":
+          description: Contact submission created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactSubmission"
+        "400":
+          description: Bad request
+    get:
+      summary: Search contact submissions
+      operationId: searchContactSubmissions
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - submission_id
+              - user_id
+              - name
+              - email
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Contact submissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContactSubmission"
+  /resumes/{resume_id}:
+    get:
+      summary: Get resume by ID
+      operationId: getResume
+      parameters:
+        - name: resume_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resume retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resume"
+        "404":
+          description: Resume not found
+    put:
+      summary: Update resume
+      operationId: updateResume
+      parameters:
+        - name: resume_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateResumeInput"
+      responses:
+        "200":
+          description: Resume updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resume"
+        "400":
+          description: Bad request
+        "404":
+          description: Resume not found
+    delete:
+      summary: Delete resume
+      operationId: deleteResume
+      parameters:
+        - name: resume_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Resume deleted successfully
+        "404":
+          description: Resume not found
+  /resumes:
+    post:
+      summary: Create resume
+      operationId: createResume
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResumeInput"
+      responses:
+        "201":
+          description: Resume created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resume"
+        "400":
+          description: Bad request
+    get:
+      summary: Search resumes
+      operationId: searchResumes
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - resume_id
+              - user_id
+              - file_type
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Resumes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Resume"
+  /blog-posts/{post_id}:
+    get:
+      summary: Get blog post by ID
+      operationId: getBlogPost
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Blog post retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlogPost"
+        "404":
+          description: Blog post not found
+    put:
+      summary: Update blog post
+      operationId: updateBlogPost
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBlogPostInput"
+      responses:
+        "200":
+          description: Blog post updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlogPost"
+        "400":
+          description: Bad request
+        "404":
+          description: Blog post not found
+    delete:
+      summary: Delete blog post
+      operationId: deleteBlogPost
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Blog post deleted successfully
+        "404":
+          description: Blog post not found
+  /blog-posts:
+    post:
+      summary: Create blog post
+      operationId: createBlogPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBlogPostInput"
+      responses:
+        "201":
+          description: Blog post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlogPost"
+        "400":
+          description: Bad request
+    get:
+      summary: Search blog posts
+      operationId: searchBlogPosts
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - post_id
+              - user_id
+              - title
+              - slug
+              - category
+              - status
+              - created_at
+              - updated_at
+              - published_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Blog posts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BlogPost"
+  /blog-post-tags/{tag_id}:
+    get:
+      summary: Get blog post tag by ID
+      operationId: getBlogPostTag
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Blog post tag retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlogPostTag"
+        "404":
+          description: Blog post tag not found
+    put:
+      summary: Update blog post tag
+      operationId: updateBlogPostTag
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBlogPostTagInput"
+      responses:
+        "200":
+          description: Blog post tag updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlogPostTag"
+        "400":
+          description: Bad request
+        "404":
+          description: Blog post tag not found
+    delete:
+      summary: Delete blog post tag
+      operationId: deleteBlogPostTag
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Blog post tag deleted successfully
+        "404":
+          description: Blog post tag not found
+  /blog-post-tags:
+    post:
+      summary: Create blog post tag
+      operationId: createBlogPostTag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBlogPostTagInput"
+      responses:
+        "201":
+          description: Blog post tag created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlogPostTag"
+        "400":
+          description: Bad request
+    get:
+      summary: Search blog post tags
+      operationId: searchBlogPostTags
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - tag_id
+              - post_id
+              - tag_name
+              - created_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Blog post tags retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BlogPostTag"
+  /testimonials/{testimonial_id}:
+    get:
+      summary: Get testimonial by ID
+      operationId: getTestimonial
+      parameters:
+        - name: testimonial_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Testimonial retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Testimonial"
+        "404":
+          description: Testimonial not found
+    put:
+      summary: Update testimonial
+      operationId: updateTestimonial
+      parameters:
+        - name: testimonial_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTestimonialInput"
+      responses:
+        "200":
+          description: Testimonial updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Testimonial"
+        "400":
+          description: Bad request
+        "404":
+          description: Testimonial not found
+    delete:
+      summary: Delete testimonial
+      operationId: deleteTestimonial
+      parameters:
+        - name: testimonial_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Testimonial deleted successfully
+        "404":
+          description: Testimonial not found
+  /testimonials:
+    post:
+      summary: Create testimonial
+      operationId: createTestimonial
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTestimonialInput"
+      responses:
+        "201":
+          description: Testimonial created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Testimonial"
+        "400":
+          description: Bad request
+    get:
+      summary: Search testimonials
+      operationId: searchTestimonials
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - testimonial_id
+              - user_id
+              - name
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Testimonials retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Testimonial"
+  /themes/{theme_id}:
+    get:
+      summary: Get theme by ID
+      operationId: getTheme
+      parameters:
+        - name: theme_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Theme retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Theme"
+        "404":
+          description: Theme not found
+    put:
+      summary: Update theme
+      operationId: updateTheme
+      parameters:
+        - name: theme_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateThemeInput"
+      responses:
+        "200":
+          description: Theme updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Theme"
+        "400":
+          description: Bad request
+        "404":
+          description: Theme not found
+    delete:
+      summary: Delete theme
+      operationId: deleteTheme
+      parameters:
+        - name: theme_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Theme deleted successfully
+        "404":
+          description: Theme not found
+  /themes:
+    post:
+      summary: Create theme
+      operationId: createTheme
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateThemeInput"
+      responses:
+        "201":
+          description: Theme created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Theme"
+        "400":
+          description: Bad request
+    get:
+      summary: Search themes
+      operationId: searchThemes
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - theme_id
+              - user_id
+              - name
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Themes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Theme"
+  /portfolio-views/{view_id}:
+    get:
+      summary: Get portfolio view by ID
+      operationId: getPortfolioView
+      parameters:
+        - name: view_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Portfolio view retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioView"
+        "404":
+          description: Portfolio view not found
+    put:
+      summary: Update portfolio view
+      operationId: updatePortfolioView
+      parameters:
+        - name: view_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePortfolioViewInput"
+      responses:
+        "200":
+          description: Portfolio view updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioView"
+        "400":
+          description: Bad request
+        "404":
+          description: Portfolio view not found
+    delete:
+      summary: Delete portfolio view
+      operationId: deletePortfolioView
+      parameters:
+        - name: view_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Portfolio view deleted successfully
+        "404":
+          description: Portfolio view not found
+  /portfolio-views:
+    post:
+      summary: Create portfolio view
+      operationId: createPortfolioView
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePortfolioViewInput"
+      responses:
+        "201":
+          description: Portfolio view created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioView"
+        "400":
+          description: Bad request
+    get:
+      summary: Search portfolio views
+      operationId: searchPortfolioViews
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - view_id
+              - user_id
+              - created_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Portfolio views retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PortfolioView"
+  /contact-form-settings/{setting_id}:
+    get:
+      summary: Get contact form setting by ID
+      operationId: getContactFormSetting
+      parameters:
+        - name: setting_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Contact form setting retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactFormSetting"
+        "404":
+          description: Contact form setting not found
+    put:
+      summary: Update contact form setting
+      operationId: updateContactFormSetting
+      parameters:
+        - name: setting_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContactFormSettingInput"
+      responses:
+        "200":
+          description: Contact form setting updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactFormSetting"
+        "400":
+          description: Bad request
+        "404":
+          description: Contact form setting not found
+    delete:
+      summary: Delete contact form setting
+      operationId: deleteContactFormSetting
+      parameters:
+        - name: setting_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Contact form setting deleted successfully
+        "404":
+          description: Contact form setting not found
+  /contact-form-settings:
+    post:
+      summary: Create contact form setting
+      operationId: createContactFormSetting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContactFormSettingInput"
+      responses:
+        "201":
+          description: Contact form setting created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactFormSetting"
+        "400":
+          description: Bad request
+    get:
+      summary: Search contact form settings
+      operationId: searchContactFormSettings
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum:
+              - setting_id
+              - user_id
+              - created_at
+              - updated_at
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: Contact form settings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContactFormSetting"
+security:
+  - bearerAuth: []

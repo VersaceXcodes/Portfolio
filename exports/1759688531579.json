@@ -1,0 +1,19 @@
+{
+  "timestamp": 1759688531579,
+  "operation": {
+    "id": "webapp:react:views",
+    "refs": {
+      "id": "UV_Landing",
+      "version": "1759688408912"
+    }
+  },
+  "projectId": "portfolio",
+  "files": [
+    {
+      "path": "/mnt/data/portfolio/vitereact/src/components/views/UV_Landing.tsx",
+      "type": "text",
+      "size": 30180,
+      "dependencies": false
+    }
+  ]
+}

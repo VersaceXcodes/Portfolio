@@ -1,0 +1,19 @@
+{
+  "timestamp": 1759688438263,
+  "operation": {
+    "id": "webapp:react:views",
+    "refs": {
+      "id": "UV_Skills",
+      "version": "latest"
+    }
+  },
+  "projectId": "portfolio",
+  "files": [
+    {
+      "path": "/mnt/data/portfolio/vitereact/src/components/views/UV_Skills.tsx",
+      "type": "text",
+      "size": 7181,
+      "dependencies": false
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "timestamp": 1759690525737,
+  "operation": {
+    "id": "webapp:react:views",
+    "refs": {
+      "id": "GV_MoreInfoModal",
+      "version": "1759690488741"
+    }
+  },
+  "projectId": "portfolio",
+  "files": [
+    {
+      "path": "/mnt/data/portfolio/vitereact/src/components/views/GV_MoreInfoModal.tsx",
+      "type": "text",
+      "size": 10850,
+      "dependencies": false
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "timestamp": 1759690385329,
+  "operation": {
+    "id": "backend:server:main"
+  },
+  "projectId": "portfolio",
+  "files": [
+    {
+      "path": "/mnt/data/portfolio/backend/server.ts",
+      "type": "text",
+      "size": 81770,
+      "dependencies": false
+    }
+  ]
+}

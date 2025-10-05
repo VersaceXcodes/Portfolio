@@ -1,0 +1,19 @@
+{
+  "timestamp": 1759690539907,
+  "operation": {
+    "id": "webapp:react:views",
+    "refs": {
+      "id": "UV_Experience",
+      "version": "latest"
+    }
+  },
+  "projectId": "portfolio",
+  "files": [
+    {
+      "path": "/mnt/data/portfolio/vitereact/src/components/views/UV_Experience.tsx",
+      "type": "text",
+      "size": 15099,
+      "dependencies": false
+    }
+  ]
+}

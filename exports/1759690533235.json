@@ -1,0 +1,19 @@
+{
+  "timestamp": 1759690533235,
+  "operation": {
+    "id": "webapp:react:views",
+    "refs": {
+      "id": "GV_BottomTabNavigation",
+      "version": "latest"
+    }
+  },
+  "projectId": "portfolio",
+  "files": [
+    {
+      "path": "/mnt/data/portfolio/vitereact/src/components/views/GV_BottomTabNavigation.tsx",
+      "type": "text",
+      "size": 10799,
+      "dependencies": false
+    }
+  ]
+}

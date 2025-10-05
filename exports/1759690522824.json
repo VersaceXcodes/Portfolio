@@ -1,0 +1,19 @@
+{
+  "timestamp": 1759690522824,
+  "operation": {
+    "id": "webapp:react:views",
+    "refs": {
+      "id": "UV_Education",
+      "version": "1759690488470"
+    }
+  },
+  "projectId": "portfolio",
+  "files": [
+    {
+      "path": "/mnt/data/portfolio/vitereact/src/components/views/UV_Education.tsx",
+      "type": "text",
+      "size": 10351,
+      "dependencies": false
+    }
+  ]
+}

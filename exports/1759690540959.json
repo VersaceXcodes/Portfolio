@@ -1,0 +1,19 @@
+{
+  "timestamp": 1759690540959,
+  "operation": {
+    "id": "webapp:react:views",
+    "refs": {
+      "id": "GV_ScrollNavigationSidebar",
+      "version": "latest"
+    }
+  },
+  "projectId": "portfolio",
+  "files": [
+    {
+      "path": "/mnt/data/portfolio/vitereact/src/components/views/GV_ScrollNavigationSidebar.tsx",
+      "type": "text",
+      "size": 15168,
+      "dependencies": false
+    }
+  ]
+}

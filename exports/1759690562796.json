@@ -1,0 +1,19 @@
+{
+  "timestamp": 1759690562796,
+  "operation": {
+    "id": "webapp:react:views",
+    "refs": {
+      "id": "GV_HeaderWithAvatar",
+      "version": "1759690488642"
+    }
+  },
+  "projectId": "portfolio",
+  "files": [
+    {
+      "path": "/mnt/data/portfolio/vitereact/src/components/views/GV_HeaderWithAvatar.tsx",
+      "type": "text",
+      "size": 12667,
+      "dependencies": false
+    }
+  ]
+}

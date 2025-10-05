@@ -1,530 +1,455 @@
-import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '@/store/main';
+import { User, Project, KeyFact } from '@/types/zodSchemas';
+
+// Define TypeScript interfaces
+interface SocialMediaLink {
+  platform: string;
+  url: string;
+}
 
 const UV_Landing: React.FC = () => {
-  // Zustand store selectors
+  // Zustand store access
   const currentUser = useAppStore(state => state.authentication_state.current_user);
-  const featuredProjects = useAppStore(state => state.featured_projects);
-  const skills = useAppStore(state => state.skills);
-  const socialLinks = useAppStore(state => state.social_links);
-  const isLoadingUser = useAppStore(state => state.is_loading.user);
-  const isLoadingProjects = useAppStore(state => state.is_loading.projects);
-  const isLoadingSkills = useAppStore(state => state.is_loading.skills);
-  const isLoadingSocialLinks = useAppStore(state => state.is_loading.social_links);
-  const fetchUserProfile = useAppStore(state => state.fetch_user_profile);
-  const fetchFeaturedProjects = useAppStore(state => state.fetch_featured_projects);
-  const fetchSkills = useAppStore(state => state.fetch_skills);
-  const fetchSocialLinks = useAppStore(state => state.fetch_social_links);
-
-  // Fetch data on component mount
+  const authToken = useAppStore(state => state.authentication_state.auth_token);
+  
+  // State for scroll detection
+  const [activeSection, setActiveSection] = useState('hero');
+  const [searchParams] = useSearchParams();
+  
+  // Refs for scroll sections
+  const heroRef = useRef<HTMLDivElement>(null);
+  const aboutRef = useRef<HTMLDivElement>(null);
+  const projectsRef = useRef<HTMLDivElement>(null);
+  const factsRef = useRef<HTMLDivElement>(null);
+  
+  // Scroll to section if specified in URL
   useEffect(() => {
-    fetchUserProfile();
-    fetchFeaturedProjects();
-    fetchSkills();
-    fetchSocialLinks();
-  }, [fetchUserProfile, fetchFeaturedProjects, fetchSkills, fetchSocialLinks]);
-
-  // Handle scroll to section
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+    const scrollTo = searchParams.get('scroll_to');
+    if (scrollTo) {
+      setTimeout(() => {
+        const element = document.getElementById(scrollTo);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
     }
-  };
-
-  // Get social icon based on platform
-  const getSocialIcon = (platform: string) => {
-    switch (platform.toLowerCase()) {
+  }, [searchParams]);
+  
+  // Scroll event listener for section detection
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 100;
+      
+      if (factsRef.current && scrollPosition >= factsRef.current.offsetTop) {
+        setActiveSection('facts');
+      } else if (projectsRef.current && scrollPosition >= projectsRef.current.offsetTop) {
+        setActiveSection('projects');
+      } else if (aboutRef.current && scrollPosition >= aboutRef.current.offsetTop) {
+        setActiveSection('about');
+      } else {
+        setActiveSection('hero');
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  
+  // Update active tab in store
+  const setActiveTab = useAppStore(state => state.set_active_tab);
+  useEffect(() => {
+    setActiveTab(activeSection);
+  }, [activeSection, setActiveTab]);
+  
+  // Fetch user data
+  const {
+    data: userData,
+    isLoading: isUserLoading,
+    isError: isUserError,
+    error: userError
+  } = useQuery<User>({
+    queryKey: ['user', currentUser?.user_id],
+    queryFn: async () => {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/users/${currentUser?.user_id}`,
+        {
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+        }
+      );
+      return response.data;
+    },
+    enabled: !!currentUser?.user_id
+  });
+  
+  // Fetch featured projects
+  const {
+    data: projectsData,
+    isLoading: isProjectsLoading,
+    isError: isProjectsError,
+    error: projectsError
+  } = useQuery<Project[]>({
+    queryKey: ['projects', currentUser?.user_id],
+    queryFn: async () => {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/users/${currentUser?.user_id}/projects`,
+        {
+          params: {
+            limit: 3,
+            sort_by: 'created_at',
+            sort_order: 'desc'
+          },
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+        }
+      );
+      return response.data;
+    },
+    enabled: !!currentUser?.user_id,
+    select: (data) => data.slice(0, 3)
+  });
+  
+  // Fetch key facts
+  const {
+    data: keyFactsData,
+    isLoading: isKeyFactsLoading,
+    isError: isKeyFactsError,
+    error: keyFactsError
+  } = useQuery<KeyFact[]>({
+    queryKey: ['keyFacts', currentUser?.user_id],
+    queryFn: async () => {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/users/${currentUser?.user_id}/key-facts`,
+        {
+          params: {
+            sort_by: 'display_order',
+            sort_order: 'asc'
+          },
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+        }
+      );
+      return response.data;
+    },
+    enabled: !!currentUser?.user_id
+  });
+  
+  // Mock social media links (would come from API in real implementation)
+  const socialLinks: SocialMediaLink[] = [
+    { platform: 'github', url: '#' },
+    { platform: 'linkedin', url: '#' },
+    { platform: 'twitter', url: '#' },
+    { platform: 'email', url: '#' }
+  ];
+  
+  // Helper function to render social icons
+  const renderSocialIcon = (platform: string) => {
+    switch (platform) {
       case 'github':
         return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z" />
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
           </svg>
         );
       case 'linkedin':
         return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
           </svg>
         );
       case 'twitter':
         return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
+          </svg>
+        );
+      case 'email':
+        return (
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 12.713l-11.985-9.713h23.97l-11.985 9.713zm0 2.574l-12-9.725v15.438h24v-15.438l-12 9.725z" />
           </svg>
         );
       default:
         return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm0 22c-5.514 0-10-4.486-10-10s4.486-10 10-10 10 4.486 10 10-4.486 10-10 10zm-1-17h2v6h-2v-6zm0 8h2v2h-2v-2z" />
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm0 22c-5.514 0-10-4.486-10-10s4.486-10 10-10 10 4.486 10 10-4.486 10-10 10zm-1-17h2v8h-2v-8zm0 10h2v2h-2v-2z" />
           </svg>
         );
     }
   };
-
+  
+  // Helper function to format tagline
+  const formatTagline = (tagline: string | null) => {
+    if (!tagline) return 'Professional Portfolio';
+    return tagline;
+  };
+  
+  // Loading state
+  if (isUserLoading || isProjectsLoading || isKeyFactsLoading) {
+    return (
+      <>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </>
+    );
+  }
+  
+  // Error state
+  if (isUserError || isProjectsError || isKeyFactsError) {
+    return (
+      <>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md max-w-md">
+            <p className="font-medium">Error loading content</p>
+            <p className="text-sm mt-1">
+              {(userError || projectsError || keyFactsError) as string}
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
+  
   return (
     <>
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 z-0 bg-gray-200 opacity-20"></div>
-        <div className="relative z-10 max-w-7xl mx-auto text-center py-16 md:py-24">
-          <div className="space-y-8">
-            {isLoadingUser ? (
-              <div className="space-y-4">
-                <div className="h-12 bg-gray-200 rounded w-64 mx-auto animate-pulse"></div>
-                <div className="h-6 bg-gray-200 rounded w-48 mx-auto animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded w-80 mx-auto animate-pulse"></div>
-              </div>
-            ) : (
-              <>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight">
-                  {currentUser?.name || 'Developer Name'}
-                </h1>
-                <p className="text-xl md:text-2xl text-gray-700 font-medium">
-                  {currentUser?.professional_title || 'React Native Developer'}
-                </p>
-                <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-                  {currentUser?.tagline || 'Crafting performant cross-platform applications with modern technologies'}
-                </p>
-              </>
-            )}
-
-            <div className="flex flex-col sm:flex-row justify-center gap-4 pt-6">
-              <button
-                onClick={() => scrollToSection('projects')}
-                className="px-8 py-3 bg-blue-600 text-white font-medium rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-100"
+      <div 
+        ref={heroRef}
+        id="hero"
+        className="relative h-screen flex items-center justify-center"
+        style={{
+          backgroundImage: userData?.header_image_url 
+            ? `url(${userData.header_image_url})` 
+            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      >
+        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+        
+        <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8">
+          {/* Avatar */}
+          <div className="mb-6">
+            <img 
+              src={userData?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData?.name || 'User')}&size=128`}
+              alt={userData?.name}
+              className="w-32 h-32 rounded-full mx-auto border-4 border-white shadow-xl"
+            />
+          </div>
+          
+          {/* Name */}
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
+            {userData?.name || 'Your Name'}
+          </h1>
+          
+          {/* Tagline */}
+          <p className="text-xl md:text-2xl text-gray-200 mb-8">
+            {formatTagline(userData?.tagline)}
+          </p>
+          
+          {/* Social Media Icons */}
+          <div className="flex justify-center space-x-6 mb-10">
+            {socialLinks.map((link, index) => (
+              <a
+                key={index}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:text-gray-200 transition-colors duration-200"
+                aria-label={link.platform}
               >
-                View Projects
-              </button>
-              <button
-                onClick={() => scrollToSection('contact')}
-                className="px-8 py-3 bg-white text-blue-600 font-medium rounded-lg shadow-lg border border-blue-200 hover:bg-blue-50 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-100"
-              >
-                Contact Me
-              </button>
-            </div>
-
-            {socialLinks.length > 0 && (
-              <div className="flex justify-center space-x-6 pt-8">
-                {socialLinks.map((link) => (
-                  <a
-                    key={link.link_id}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-gray-700 hover:text-blue-600 transition-colors duration-200"
-                    aria-label={`Follow me on ${link.platform}`}
-                  >
-                    {getSocialIcon(link.platform)}
-                  </a>
-                ))}
-              </div>
-            )}
+                <div className="bg-black bg-opacity-30 rounded-full p-3 hover:bg-opacity-50 transition-all duration-200">
+                  {renderSocialIcon(link.platform)}
+                </div>
+              </a>
+            ))}
           </div>
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section id="about" className="py-16 md:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">About Me</h2>
-            <div className="w-20 h-1 bg-blue-600 mx-auto"></div>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-12 items-center">
-            <div className="md:w-1/3 flex justify-center">
-              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-64 h-64" />
-            </div>
-            <div className="md:w-2/3">
-              <p className="text-lg text-gray-700 mb-6">
-                {currentUser?.bio || 
-                "I'm a passionate React Native developer with experience building cross-platform mobile applications. I specialize in creating performant, scalable, and user-friendly applications using modern technologies and best practices."}
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <p className="ml-3 text-gray-700">React Native</p>
-                </div>
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <p className="ml-3 text-gray-700">TypeScript</p>
-                </div>
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <p className="ml-3 text-gray-700">Mobile Optimization</p>
-                </div>
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <p className="ml-3 text-gray-700">UI/UX Design</p>
-                </div>
-              </div>
-              <div className="mt-8">
-                <Link 
-                  to="/about" 
-                  className="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-900 font-medium rounded-lg hover:bg-gray-200 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-gray-100"
-                >
-                  Learn More About Me
-                  <svg className="ml-2 -mr-1 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Skills Section */}
-      <section id="skills" className="py-16 md:py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Skills & Expertise</h2>
-            <div className="w-20 h-1 bg-blue-600 mx-auto"></div>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Technologies and tools I specialize in
-            </p>
-          </div>
-
-          {isLoadingSkills ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="bg-white p-6 rounded-xl shadow-md animate-pulse">
-                  <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {skills.map((skill) => (
-                <div key={skill.skill_id} className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200">
-                  <div className="flex items-center mb-4">
-                    <div className="bg-blue-100 p-2 rounded-lg">
-                      {skill.icon_name ? (
-                        <span className="text-blue-600 font-bold">{skill.icon_name}</span>
-                      ) : (
-                        <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                        </svg>
-                      )}
-                    </div>
-                    <h3 className="ml-4 text-lg font-semibold text-gray-900">{skill.name}</h3>
-                  </div>
-                  <p className="text-gray-600">
-                    {skill.description || `Proficiency in ${skill.name}`}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-12 text-center">
-            <Link 
-              to="/skills" 
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-blue-100"
+          
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              to="/contact"
+              className="px-6 py-3 bg-white text-blue-600 font-medium rounded-lg shadow-lg hover:bg-gray-100 transition-colors duration-200"
             >
-              View All Skills
-              <svg className="ml-2 -mr-1 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              Contact Me
             </Link>
+            <a
+              href="#"
+              className="px-6 py-3 bg-transparent border-2 border-white text-white font-medium rounded-lg hover:bg-white hover:text-gray-900 transition-colors duration-200"
+            >
+              Download CV
+            </a>
           </div>
         </div>
-      </section>
-
-      {/* Projects Section */}
-      <section id="projects" className="py-16 md:py-24 bg-white">
+        
+        {/* Scroll indicator */}
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 animate-bounce">
+          <a href="#about" className="text-white">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </a>
+        </div>
+      </div>
+      
+      {/* About Section */}
+      <div 
+        ref={aboutRef}
+        id="about"
+        className="py-16 bg-white"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Featured Projects</h2>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">About Me</h2>
             <div className="w-20 h-1 bg-blue-600 mx-auto"></div>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Check out some of my recent work
-            </p>
           </div>
-
-          {isLoadingProjects ? (
+          
+          <div className="max-w-3xl mx-auto">
+            {userData?.bio_text ? (
+              <p className="text-lg text-gray-600 leading-relaxed">
+                {userData.bio_text}
+              </p>
+            ) : (
+              <p className="text-lg text-gray-600 leading-relaxed">
+                Welcome to my professional portfolio. I'm passionate about creating innovative solutions and delivering exceptional results. With years of experience in my field, I strive to continuously learn and grow while contributing to meaningful projects.
+              </p>
+            )}
+            
+            {/* Key Facts */}
+            {keyFactsData && keyFactsData.length > 0 && (
+              <div className="mt-10">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Key Facts</h3>
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {keyFactsData.map((fact) => (
+                    <li key={fact.fact_id} className="flex items-start">
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="w-5 h-5 rounded-full bg-blue-600"></div>
+                      </div>
+                      <p className="ml-3 text-gray-600">{fact.content}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Projects Section */}
+      <div 
+        ref={projectsRef}
+        id="projects"
+        className="py-16 bg-gray-50"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Projects</h2>
+            <div className="w-20 h-1 bg-blue-600 mx-auto"></div>
+          </div>
+          
+          {projectsData && projectsData.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-gray-50 rounded-xl shadow-md overflow-hidden animate-pulse">
-                  <div className="h-48 bg-gray-200"></div>
-                  <div className="p-6">
-                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-5/6 mb-4"></div>
-                    <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              {projectsData.map((project) => (
+                <div 
+                  key={project.project_id} 
+                  className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
+                >
+                  <div className="h-48 bg-gray-200 relative">
+                    {project.thumbnail_url ? (
+                      <img 
+                        src={project.thumbnail_url} 
+                        alt={project.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredProjects.map((project) => (
-                <div key={project.project_id} className="bg-gray-50 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-200">
-                  <div className="h-48 bg-gray-200 border-2 border-dashed rounded-t-xl"></div>
                   <div className="p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{project.title}</h3>
-                    <p className="text-gray-600 mb-4 line-clamp-2">{project.description}</p>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {project.technologies_used?.split(',').map((tech, index) => (
-                        <span 
-                          key={index} 
-                          className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full"
+                    <p className="text-gray-600 mb-4">
+                      {project.short_description || 'Project description coming soon...'}
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <Link
+                        to={`/project/${project.project_id}`}
+                        className="text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                      >
+                        View Details
+                        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                      {project.project_url && (
+                        <a 
+                          href={project.project_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-gray-500 hover:text-gray-700"
                         >
-                          {tech.trim()}
-                        </span>
-                      ))}
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 17l-5-5.299 1.399-1.43 3.574 3.736 6.572-7.007 1.457 1.403-8 8.597z" />
+                          </svg>
+                        </a>
+                      )}
                     </div>
-                    <Link 
-                      to={`/projects/${project.project_id}`}
-                      className="inline-flex items-center px-4 py-2 bg-white text-blue-600 font-medium rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-blue-100"
-                    >
-                      View Details
-                      <svg className="ml-2 -mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </Link>
                   </div>
                 </div>
               ))}
             </div>
+          ) : (
+            <div className="text-center py-12">
+              <svg className="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">No projects available</h3>
+              <p className="mt-1 text-gray-500">Check back later for featured projects.</p>
+            </div>
           )}
-
-          <div className="mt-12 text-center">
-            <Link 
-              to="/projects" 
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-blue-100"
-            >
-              View All Projects
-              <svg className="ml-2 -mr-1 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </Link>
-          </div>
         </div>
-      </section>
-
-      {/* Experience Section */}
-      <section id="experience" className="py-16 md:py-24 bg-gray-50">
+      </div>
+      
+      {/* Key Facts Section */}
+      <div 
+        ref={factsRef}
+        id="facts"
+        className="py-16 bg-white"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Work Experience</h2>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Quick Facts</h2>
             <div className="w-20 h-1 bg-blue-600 mx-auto"></div>
           </div>
-
-          <div className="max-w-3xl mx-auto">
-            <div className="relative">
-              {/* Vertical line */}
-              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-blue-200 transform -translate-x-1/2 md:left-1/2"></div>
-              
-              {/* Experience items */}
-              <div className="space-y-12">
-                <div className="relative pl-12 md:pl-0 md:flex md:items-center">
-                  <div className="absolute left-0 md:left-1/2 md:transform md:-translate-x-1/2 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="md:ml-16 md:mr-auto md:w-5/12 md:text-right">
-                    <h3 className="text-xl font-bold text-gray-900">Senior React Native Developer</h3>
-                    <p className="text-blue-600 font-medium">Tech Company Inc.</p>
-                    <p className="text-gray-600 mt-1">Jan 2022 - Present</p>
-                  </div>
-                  <div className="mt-4 md:mt-0 md:ml-auto md:w-5/12">
-                    <p className="text-gray-600">
-                      Leading mobile development team, architecting scalable cross-platform solutions for enterprise clients.
-                    </p>
-                  </div>
+          
+          {keyFactsData && keyFactsData.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {keyFactsData.map((fact, index) => (
+                <div 
+                  key={fact.fact_id} 
+                  className="text-center p-6 bg-gray-50 rounded-lg"
+                >
+                  <div className="text-4xl font-bold text-blue-600 mb-2">0{index + 1}</div>
+                  <p className="text-gray-700">{fact.content}</p>
                 </div>
-
-                <div className="relative pl-12 md:pl-0 md:flex md:items-center">
-                  <div className="absolute left-0 md:left-1/2 md:transform md:-translate-x-1/2 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="md:ml-16 md:mr-auto md:w-5/12 md:text-right">
-                    <h3 className="text-xl font-bold text-gray-900">Mobile App Developer</h3>
-                    <p className="text-blue-600 font-medium">Digital Solutions Ltd.</p>
-                    <p className="text-gray-600 mt-1">Mar 2020 - Dec 2021</p>
-                  </div>
-                  <div className="mt-4 md:mt-0 md:ml-auto md:w-5/12">
-                    <p className="text-gray-600">
-                      Developed and maintained multiple cross-platform mobile applications using React Native.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="relative pl-12 md:pl-0 md:flex md:items-center">
-                  <div className="absolute left-0 md:left-1/2 md:transform md:-translate-x-1/2 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="md:ml-16 md:mr-auto md:w-5/12 md:text-right">
-                    <h3 className="text-xl font-bold text-gray-900">Frontend Developer</h3>
-                    <p className="text-blue-600 font-medium">Web Innovations Co.</p>
-                    <p className="text-gray-600 mt-1">Jun 2018 - Feb 2020</p>
-                  </div>
-                  <div className="mt-4 md:mt-0 md:ml-auto md:w-5/12">
-                    <p className="text-gray-600">
-                      Built responsive web applications with React and implemented mobile-first design principles.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
-          </div>
-
-          <div className="mt-12 text-center">
-            <Link 
-              to="/experience" 
-              className="inline-flex items-center px-6 py-3 bg-white text-blue-600 font-medium rounded-lg shadow border border-blue-200 hover:bg-blue-50 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-blue-100"
-            >
-              View Full Experience
-              <svg className="ml-2 -mr-1 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          ) : (
+            <div className="text-center py-12">
+              <svg className="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Section */}
-      <section id="contact" className="py-16 md:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Get In Touch</h2>
-            <div className="w-20 h-1 bg-blue-600 mx-auto"></div>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Have a project in mind or want to discuss potential opportunities? Let's connect!
-            </p>
-          </div>
-
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-gray-50 rounded-2xl shadow-lg p-8 md:p-12">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">Contact Information</h3>
-                  <div className="space-y-6">
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 bg-blue-100 p-3 rounded-lg">
-                        <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <div className="ml-4">
-                        <h4 className="text-lg font-medium text-gray-900">Email</h4>
-                        <p className="mt-1 text-gray-600">{currentUser?.email || 'user@example.com'}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 bg-blue-100 p-3 rounded-lg">
-                        <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
-                      </div>
-                      <div className="ml-4">
-                        <h4 className="text-lg font-medium text-gray-900">Phone</h4>
-                        <p className="mt-1 text-gray-600">{currentUser?.phone_number || '+1 (555) 123-4567'}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 bg-blue-100 p-3 rounded-lg">
-                        <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                      </div>
-                      <div className="ml-4">
-                        <h4 className="text-lg font-medium text-gray-900">Location</h4>
-                        <p className="mt-1 text-gray-600">{currentUser?.location || 'San Francisco, CA'}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-10">
-                    <Link 
-                      to="/contact" 
-                      className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-blue-100"
-                    >
-                      View Full Contact Page
-                      <svg className="ml-2 -mr-1 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">Quick Message</h3>
-                  <form className="space-y-6">
-                    <div>
-                      <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
-                      <input
-                        type="text"
-                        id="name"
-                        className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Your name"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                      <input
-                        type="email"
-                        id="email"
-                        className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="your.email@example.com"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="message" className="block text-sm font-medium text-gray-700">Message</label>
-                      <textarea
-                        id="message"
-                        rows={4}
-                        className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Hi, I noticed your portfolio and would love to discuss..."
-                      ></textarea>
-                    </div>
-                    
-                    <div>
-                      <button
-                        type="submit"
-                        className="w-full px-6 py-3 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-blue-100"
-                      >
-                        Send Message
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">No facts available</h3>
+              <p className="mt-1 text-gray-500">Check back later for interesting facts.</p>
             </div>
-          </div>
+          )}
         </div>
-      </section>
+      </div>
     </>
   );
 };

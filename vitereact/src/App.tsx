@@ -3,23 +3,21 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAppStore } from '@/store/main';
 
-// Global shared views
-import GV_TopNav from '@/components/views/GV_TopNav.tsx';
-import GV_Footer from '@/components/views/GV_Footer.tsx';
+// Import shared/global views
+import GV_HeaderWithAvatar from '@/components/views/GV_HeaderWithAvatar.tsx';
+import GV_BottomTabNavigation from '@/components/views/GV_BottomTabNavigation.tsx';
+import GV_ScrollNavigationSidebar from '@/components/views/GV_ScrollNavigationSidebar.tsx';
+import GV_MoreInfoModal from '@/components/views/GV_MoreInfoModal.tsx';
 
-// Unique views
+// Import unique views
 import UV_Landing from '@/components/views/UV_Landing.tsx';
-import UV_About from '@/components/views/UV_About.tsx';
+import UV_AboutMe from '@/components/views/UV_AboutMe.tsx';
 import UV_Skills from '@/components/views/UV_Skills.tsx';
-import UV_ProjectList from '@/components/views/UV_ProjectList.tsx';
-import UV_ProjectDetail from '@/components/views/UV_ProjectDetail.tsx';
-import UV_ExperienceTimeline from '@/components/views/UV_ExperienceTimeline.tsx';
+import UV_Projects from '@/components/views/UV_Projects.tsx';
+import UV_Experience from '@/components/views/UV_Experience.tsx';
 import UV_Education from '@/components/views/UV_Education.tsx';
-import UV_BlogFeed from '@/components/views/UV_BlogFeed.tsx';
-import UV_Contact from '@/components/views/UV_Contact.tsx';
-import UV_DownloadResume from '@/components/views/UV_DownloadResume.tsx';
-import UV_ErrorPage from '@/components/views/UV_ErrorPage.tsx';
-import UV_PrivacyPolicy from '@/components/views/UV_PrivacyPolicy.tsx';
+import UV_ContactForm from '@/components/views/UV_ContactForm.tsx';
+import UV_Settings from '@/components/views/UV_Settings.tsx';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,7 +35,7 @@ const LoadingSpinner: React.FC = () => (
   </div>
 );
 
-// Protected Route wrapper
+// Protected Route Wrapper (currently not needed but included for future-proofing)
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isAuthenticated = useAppStore(state => state.authentication_state.authentication_status.is_authenticated);
   const isLoading = useAppStore(state => state.authentication_state.authentication_status.is_loading);
@@ -46,10 +44,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <LoadingSpinner />;
   }
   
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  
+  // Currently all routes are public, so this just passes through
+  // In a real app, this would redirect to login if not authenticated
   return <>{children}</>;
 };
 
@@ -70,28 +66,113 @@ const App: React.FC = () => {
     <Router>
       <QueryClientProvider client={queryClient}>
         <div className="App min-h-screen flex flex-col">
-          <GV_TopNav />
-          <main className="flex-1">
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<UV_Landing />} />
-              <Route path="/about" element={<UV_About />} />
-              <Route path="/skills" element={<UV_Skills />} />
-              <Route path="/projects" element={<UV_ProjectList />} />
-              <Route path="/projects/:project_id" element={<UV_ProjectDetail />} />
-              <Route path="/experience" element={<UV_ExperienceTimeline />} />
-              <Route path="/education" element={<UV_Education />} />
-              <Route path="/blog" element={<UV_BlogFeed />} />
-              <Route path="/contact" element={<UV_Contact />} />
-              <Route path="/resume" element={<UV_DownloadResume />} />
-              <Route path="/privacy" element={<UV_PrivacyPolicy />} />
-              <Route path="/error" element={<UV_ErrorPage />} />
-              
-              {/* Default redirect */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
-          <GV_Footer />
+          <Routes>
+            {/* Main Landing Page with Header */}
+            <Route 
+              path="/" 
+              element={
+                <div className="flex flex-col min-h-screen">
+                  <GV_HeaderWithAvatar />
+                  <main className="flex-1">
+                    <UV_Landing />
+                  </main>
+                  <GV_BottomTabNavigation />
+                  <GV_ScrollNavigationSidebar />
+                  <GV_MoreInfoModal />
+                </div>
+              } 
+            />
+            
+            {/* About Me Section */}
+            <Route 
+              path="/about" 
+              element={
+                <div className="flex flex-col min-h-screen">
+                  <main className="flex-1">
+                    <UV_AboutMe />
+                  </main>
+                  <GV_BottomTabNavigation />
+                  <GV_ScrollNavigationSidebar />
+                  <GV_MoreInfoModal />
+                </div>
+              } 
+            />
+            
+            {/* Skills Section */}
+            <Route 
+              path="/skills" 
+              element={
+                <div className="flex flex-col min-h-screen">
+                  <main className="flex-1">
+                    <UV_Skills />
+                  </main>
+                  <GV_BottomTabNavigation />
+                  <GV_ScrollNavigationSidebar />
+                  <GV_MoreInfoModal />
+                </div>
+              } 
+            />
+            
+            {/* Projects Section */}
+            <Route 
+              path="/projects" 
+              element={
+                <div className="flex flex-col min-h-screen">
+                  <main className="flex-1">
+                    <UV_Projects />
+                  </main>
+                  <GV_BottomTabNavigation />
+                  <GV_ScrollNavigationSidebar />
+                  <GV_MoreInfoModal />
+                </div>
+              } 
+            />
+            
+            {/* Experience Section */}
+            <Route 
+              path="/experience" 
+              element={
+                <div className="flex flex-col min-h-screen">
+                  <main className="flex-1">
+                    <UV_Experience />
+                  </main>
+                  <GV_BottomTabNavigation />
+                  <GV_ScrollNavigationSidebar />
+                  <GV_MoreInfoModal />
+                </div>
+              } 
+            />
+            
+            {/* Education Section */}
+            <Route 
+              path="/education" 
+              element={
+                <div className="flex flex-col min-h-screen">
+                  <main className="flex-1">
+                    <UV_Education />
+                  </main>
+                  <GV_BottomTabNavigation />
+                  <GV_ScrollNavigationSidebar />
+                  <GV_MoreInfoModal />
+                </div>
+              } 
+            />
+            
+            {/* Contact Form Modal */}
+            <Route 
+              path="/contact" 
+              element={<UV_ContactForm />} 
+            />
+            
+            {/* Settings Panel */}
+            <Route 
+              path="/settings" 
+              element={<UV_Settings />} 
+            />
+            
+            {/* Redirect unknown routes to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </div>
       </QueryClientProvider>
     </Router>

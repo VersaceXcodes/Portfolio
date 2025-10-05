@@ -1,0 +1,19 @@
+{
+  "timestamp": 1759690487142,
+  "operation": {
+    "id": "webapp:react:root",
+    "refs": {
+      "id": "app",
+      "version": "1759690470030"
+    }
+  },
+  "projectId": "portfolio",
+  "files": [
+    {
+      "path": "/mnt/data/portfolio/vitereact/src/App.tsx",
+      "type": "text",
+      "size": 6133,
+      "dependencies": false
+    }
+  ]
+}

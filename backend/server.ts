@@ -3,30 +3,26 @@ import cors from 'cors';
 import * as dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
-import { Pool } from 'pg';
 import { fileURLToPath } from 'url';
+import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
 import morgan from 'morgan';
 import { v4 as uuidv4 } from 'uuid';
 
-// Import all Zod schemas for validation
+// Import Zod schemas
 import {
   userSchema, createUserInputSchema, updateUserInputSchema, searchUserInputSchema,
+  socialMediaLinkSchema, createSocialMediaLinkInputSchema, updateSocialMediaLinkInputSchema, searchSocialMediaLinkInputSchema,
   skillSchema, createSkillInputSchema, updateSkillInputSchema, searchSkillInputSchema,
   projectSchema, createProjectInputSchema, updateProjectInputSchema, searchProjectInputSchema,
-  projectImageSchema, createProjectImageInputSchema, updateProjectImageInputSchema, searchProjectImageInputSchema,
+  projectScreenshotSchema, createProjectScreenshotInputSchema, updateProjectScreenshotInputSchema, searchProjectScreenshotInputSchema,
   experienceSchema, createExperienceInputSchema, updateExperienceInputSchema, searchExperienceInputSchema,
   educationSchema, createEducationInputSchema, updateEducationInputSchema, searchEducationInputSchema,
-  certificationSchema, createCertificationInputSchema, updateCertificationInputSchema, searchCertificationInputSchema,
-  blogPostSchema, createBlogPostInputSchema, updateBlogPostInputSchema, searchBlogPostInputSchema,
-  contactMessageSchema, createContactMessageInputSchema, updateContactMessageInputSchema, searchContactMessageInputSchema,
+  keyFactSchema, createKeyFactInputSchema, updateKeyFactInputSchema, searchKeyFactInputSchema,
   resumeDownloadSchema, createResumeDownloadInputSchema, updateResumeDownloadInputSchema, searchResumeDownloadInputSchema,
-  siteSettingSchema, createSiteSettingInputSchema, updateSiteSettingInputSchema, searchSiteSettingInputSchema,
-  testimonialSchema, createTestimonialInputSchema, updateTestimonialInputSchema, searchTestimonialInputSchema,
-  socialMediaLinkSchema, createSocialMediaLinkInputSchema, updateSocialMediaLinkInputSchema, searchSocialMediaLinkInputSchema,
-  pageVisitSchema, createPageVisitInputSchema, updatePageVisitInputSchema, searchPageVisitInputSchema,
-  sectionVisitSchema, createSectionVisitInputSchema, updateSectionVisitInputSchema, searchSectionVisitInputSchema,
-  mediaAssetSchema, createMediaAssetInputSchema, updateMediaAssetInputSchema, searchMediaAssetInputSchema
+  contactMessageSchema, createContactMessageInputSchema, updateContactMessageInputSchema, searchContactMessageInputSchema,
+  appSettingSchema, createAppSettingInputSchema, updateAppSettingInputSchema, searchAppSettingInputSchema,
+  navigationPreferenceSchema, createNavigationPreferenceInputSchema, updateNavigationPreferenceInputSchema, searchNavigationPreferenceInputSchema
 } from './schema.ts';
 
 dotenv.config();
@@ -35,10 +31,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/*
-Error response utility function to maintain consistent error formatting across all endpoints.
-Creates standardized error responses with timestamps and optional error details for debugging.
-*/
+// Error response utility
 interface ErrorResponse {
   success: false;
   message: string;
@@ -73,7 +66,7 @@ function createErrorResponse(
   return response;
 }
 
-// Database connection setup exactly as specified
+// Database setup
 const { DATABASE_URL, PGHOST, PGDATABASE, PGUSER, PGPASSWORD, PGPORT = 5432, JWT_SECRET = 'your-secret-key' } = process.env;
 
 const pool = new Pool(
@@ -95,17 +88,26 @@ const pool = new Pool(
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware setup
-app.use(cors());
+// Middleware
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+}));
 app.use(express.json({ limit: "5mb" }));
-app.use(morgan(':method :url :status :res[content-length] - :response-time ms'));
+app.use(morgan('combined'));
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Create storage directory if it doesn't exist
+const storagePath = path.join(__dirname, 'storage');
+if (!fs.existsSync(storagePath)) {
+  fs.mkdirSync(storagePath, { recursive: true });
+}
+
 /*
-JWT Authentication middleware for protecting routes that require user authentication.
-Validates bearer tokens and attaches user information to the request object.
+  Authentication middleware for protected routes
+  Verifies JWT token and loads user data into req.user
 */
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -118,587 +120,722 @@ const authenticateToken = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const client = await pool.connect();
-    try {
-      const result = await client.query('SELECT user_id, email, name, created_at FROM users WHERE user_id = $1', [decoded.user_id]);
-      
-      if (result.rows.length === 0) {
-        return res.status(401).json(createErrorResponse('Invalid token', null, 'AUTH_USER_NOT_FOUND'));
-      }
-
-      req.user = result.rows[0];
-      next();
-    } finally {
-      client.release();
+    const result = await client.query('SELECT user_id, email, name, created_at FROM users WHERE user_id = $1', [decoded.user_id]);
+    client.release();
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json(createErrorResponse('Invalid token', null, 'AUTH_TOKEN_INVALID'));
     }
+
+    req.user = result.rows[0];
+    next();
   } catch (error) {
     return res.status(403).json(createErrorResponse('Invalid or expired token', error, 'AUTH_TOKEN_INVALID'));
   }
 };
 
+// AUTH ENDPOINTS
+
 /*
-User registration endpoint - creates a new user account with basic validation.
-Stores password directly without hashing for development ease.
+  POST /api/auth/register
+  Registers a new user account with email, password, and name
+  Returns user object and JWT token for immediate authentication
 */
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const validatedData = createUserInputSchema.parse(req.body);
-    const { email, password_hash: password, name } = validatedData;
+    const { email, password, name } = req.body;
+
+    // Validation
+    if (!email || !password || !name) {
+      return res.status(400).json(createErrorResponse('All fields are required', null, 'MISSING_REQUIRED_FIELDS'));
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json(createErrorResponse('Password must be at least 6 characters long', null, 'PASSWORD_TOO_SHORT'));
+    }
 
     const client = await pool.connect();
-    try {
-      // Check if user already exists
-      const existingUser = await client.query('SELECT user_id FROM users WHERE email = $1', [email.toLowerCase().trim()]);
-      if (existingUser.rows.length > 0) {
-        return res.status(400).json(createErrorResponse('User with this email already exists', null, 'USER_ALREADY_EXISTS'));
-      }
-
-      // Create new user
-      const user_id = uuidv4();
-      const now = new Date().toISOString();
-      
-      const result = await client.query(
-        `INSERT INTO users (user_id, email, password_hash, name, professional_title, tagline, bio, 
-         profile_image_url, phone_number, location, github_url, linkedin_url, twitter_url, website_url, 
-         created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) 
-         RETURNING user_id, email, name, professional_title, tagline, bio, profile_image_url, phone_number, 
-         location, github_url, linkedin_url, twitter_url, website_url, created_at, updated_at`,
-        [user_id, email.toLowerCase().trim(), password, name.trim(), 
-         validatedData.professional_title, validatedData.tagline, validatedData.bio, 
-         validatedData.profile_image_url, validatedData.phone_number, validatedData.location,
-         validatedData.github_url, validatedData.linkedin_url, validatedData.twitter_url, 
-         validatedData.website_url, now, now]
-      );
-
-      const user = result.rows[0];
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { user_id: user.user_id, email: user.email }, 
-        JWT_SECRET, 
-        { expiresIn: '7d' }
-      );
-
-      res.status(201).json({
-        user,
-        token
-      });
-    } finally {
+    
+    // Check if user exists
+    const existingUser = await client.query('SELECT user_id FROM users WHERE email = $1', [email]);
+    if (existingUser.rows.length > 0) {
       client.release();
+      return res.status(409).json(createErrorResponse('User with this email already exists', null, 'USER_ALREADY_EXISTS'));
     }
+
+    // Create user (NO HASHING - store password directly for development)
+    const user_id = `usr_${uuidv4().replace(/-/g, '').substring(0, 10)}`;
+    const now = new Date().toISOString();
+    
+    const result = await client.query(
+      'INSERT INTO users (user_id, email, password_hash, name, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, email, name, created_at, updated_at',
+      [user_id, email.toLowerCase().trim(), password, name.trim(), now, now]
+    );
+    client.release();
+
+    const user = result.rows[0];
+
+    // Generate JWT
+    const token = jwt.sign(
+      { user_id: user.user_id, email: user.email }, 
+      JWT_SECRET, 
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        name: user.name,
+        created_at: user.created_at,
+        updated_at: user.updated_at
+      },
+      token
+    });
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
     console.error('Registration error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-User login endpoint - authenticates users and returns JWT token.
-Uses direct password comparison without hashing for development.
+  POST /api/auth/login
+  Authenticates user with email and password
+  Returns user object and JWT token on successful login
 */
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Validation
     if (!email || !password) {
       return res.status(400).json(createErrorResponse('Email and password are required', null, 'MISSING_REQUIRED_FIELDS'));
     }
 
     const client = await pool.connect();
-    try {
-      const result = await client.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
-      if (result.rows.length === 0) {
-        return res.status(400).json(createErrorResponse('Invalid email or password', null, 'INVALID_CREDENTIALS'));
-      }
-
-      const user = result.rows[0];
-
-      // Direct password comparison for development
-      if (password !== user.password_hash) {
-        return res.status(400).json(createErrorResponse('Invalid email or password', null, 'INVALID_CREDENTIALS'));
-      }
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { user_id: user.user_id, email: user.email }, 
-        JWT_SECRET, 
-        { expiresIn: '7d' }
-      );
-
-      // Remove password from response
-      const { password_hash, ...userResponse } = user;
-
-      res.json({
-        user: userResponse,
-        token
-      });
-    } finally {
-      client.release();
+    
+    // Find user (NO HASHING - direct password comparison for development)
+    const result = await client.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+    client.release();
+    
+    if (result.rows.length === 0) {
+      return res.status(400).json(createErrorResponse('Invalid email or password', null, 'INVALID_CREDENTIALS'));
     }
+
+    const user = result.rows[0];
+
+    // Check password (direct comparison for development)
+    const is_valid_password = password === user.password_hash;
+    if (!is_valid_password) {
+      return res.status(400).json(createErrorResponse('Invalid email or password', null, 'INVALID_CREDENTIALS'));
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { user_id: user.user_id, email: user.email }, 
+      JWT_SECRET, 
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        name: user.name,
+        created_at: user.created_at,
+        updated_at: user.updated_at
+      },
+      token
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
+// USER ENDPOINTS
+
 /*
-Get user profile endpoint - retrieves user information by user_id.
-Public endpoint for displaying portfolio information.
+  GET /api/users/:user_id
+  Retrieves a complete user profile including all related data
+  Returns user with nested arrays for social links, skills, projects, etc.
 */
-app.get('/api/users/:user_id', async (req, res) => {
+app.get('/api/users/:user_id', authenticateToken, async (req, res) => {
   try {
     const { user_id } = req.params;
-    
     const client = await pool.connect();
-    try {
-      const result = await client.query(
-        'SELECT user_id, email, name, professional_title, tagline, bio, profile_image_url, phone_number, location, github_url, linkedin_url, twitter_url, website_url, created_at, updated_at FROM users WHERE user_id = $1', 
-        [user_id]
-      );
-      
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('User not found', null, 'USER_NOT_FOUND'));
-      }
 
-      res.json(result.rows[0]);
-    } finally {
+    // Get user data
+    const userResult = await client.query('SELECT * FROM users WHERE user_id = $1', [user_id]);
+    
+    if (userResult.rows.length === 0) {
       client.release();
+      return res.status(404).json(createErrorResponse('User not found', null, 'USER_NOT_FOUND'));
     }
+
+    const user = userResult.rows[0];
+    
+    // Get all related data
+    const [socialLinks, skills, projects, experiences, education, keyFacts] = await Promise.all([
+      client.query('SELECT * FROM social_media_links WHERE user_id = $1 ORDER BY display_order ASC', [user_id]),
+      client.query('SELECT * FROM skills WHERE user_id = $1 ORDER BY display_order ASC', [user_id]),
+      client.query('SELECT * FROM projects WHERE user_id = $1 ORDER BY display_order ASC', [user_id]),
+      client.query('SELECT * FROM experiences WHERE user_id = $1 ORDER BY display_order ASC', [user_id]),
+      client.query('SELECT * FROM education WHERE user_id = $1 ORDER BY display_order ASC', [user_id]),
+      client.query('SELECT * FROM key_facts WHERE user_id = $1 ORDER BY display_order ASC', [user_id])
+    ]);
+
+    client.release();
+
+    // Remove password_hash from response
+    const { password_hash, ...safeUser } = user;
+
+    res.json({
+      user: safeUser,
+      social_links: socialLinks.rows,
+      skills: skills.rows,
+      projects: projects.rows,
+      experiences: experiences.rows,
+      education: education.rows,
+      key_facts: keyFacts.rows
+    });
   } catch (error) {
-    console.error('Get user error:', error);
+    console.error('Get user profile error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Update user profile endpoint - allows authenticated users to update their profile information.
-Validates input data and updates only provided fields.
+  PATCH /api/users/:user_id
+  Updates user profile information
+  Validates input data and updates only provided fields
 */
 app.patch('/api/users/:user_id', authenticateToken, async (req, res) => {
   try {
     const { user_id } = req.params;
-    const validatedData = updateUserInputSchema.parse({ ...req.body, user_id });
-
-    // Check if user is updating their own profile
-    if (req.user.user_id !== user_id) {
-      return res.status(403).json(createErrorResponse('Cannot update other user profiles', null, 'FORBIDDEN'));
+    
+    // Validate input using Zod schema
+    const validationResult = updateUserInputSchema.safeParse({ user_id, ...req.body });
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
     }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'user_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    // Add updated_at timestamp
+    updateFields.push(`updated_at = $${paramIndex}`);
+    updateValues.push(new Date().toISOString());
+    updateValues.push(user_id);
 
     const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
+    const result = await client.query(
+      `UPDATE users SET ${updateFields.join(', ')} WHERE user_id = $${paramIndex + 1} RETURNING user_id, email, name, tagline, bio_text, header_image_url, avatar_url, video_embed_url, created_at, updated_at`,
+      updateValues
+    );
+    client.release();
 
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'user_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      updateFields.push(`updated_at = $${paramCounter}`);
-      values.push(new Date().toISOString());
-      values.push(user_id);
-
-      const updateQuery = `
-        UPDATE users SET ${updateFields.join(', ')} 
-        WHERE user_id = $${paramCounter + 1} 
-        RETURNING user_id, email, name, professional_title, tagline, bio, profile_image_url, 
-        phone_number, location, github_url, linkedin_url, twitter_url, website_url, created_at, updated_at
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('User not found', null, 'USER_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('User not found', null, 'USER_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Update user error:', error);
+    console.error('Update user profile error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Search users endpoint - allows searching users with pagination and sorting.
-Supports text search across name and email fields.
+  GET /api/users/search
+  Searches users with optional filtering and pagination
+  Supports sorting by various fields and text-based query search
 */
-app.get('/api/users', async (req, res) => {
+app.get('/api/users/search', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchUserInputSchema.parse(req.query);
-    const { query, limit, offset, sort_by, sort_order } = validatedQuery;
+    // Validate query parameters
+    const validationResult = searchUserInputSchema.safeParse(req.query);
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { query, limit, offset, sort_by, sort_order } = validationResult.data;
+    
+    let sqlQuery = 'SELECT user_id, email, name, tagline, bio_text, header_image_url, avatar_url, created_at, updated_at FROM users';
+    const queryParams = [];
+    let paramIndex = 1;
+
+    // Add search functionality
+    if (query) {
+      sqlQuery += ` WHERE (name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR tagline ILIKE $${paramIndex})`;
+      queryParams.push(`%${query}%`);
+      paramIndex++;
+    }
+
+    // Add sorting
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order}`;
+    
+    // Add pagination
+    sqlQuery += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    queryParams.push(limit, offset);
 
     const client = await pool.connect();
-    try {
-      let whereClause = '';
-      let queryParams = [];
-      let paramCounter = 1;
+    const result = await client.query(sqlQuery, queryParams);
+    client.release();
 
-      if (query) {
-        whereClause = `WHERE (name ILIKE $${paramCounter} OR email ILIKE $${paramCounter})`;
-        queryParams.push(`%${query}%`);
-        paramCounter++;
-      }
-
-      const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT user_id, email, name, professional_title, tagline, bio, profile_image_url, 
-        phone_number, location, github_url, linkedin_url, twitter_url, website_url, created_at, updated_at 
-        FROM users ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        users: result.rows,
-        total
-      });
-    } finally {
-      client.release();
-    }
+    res.json(result.rows);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
     console.error('Search users error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
+// SOCIAL MEDIA LINKS ENDPOINTS
+
 /*
-Create skill endpoint - allows authenticated users to add new skills to their portfolio.
-Validates skill data and creates database entry with generated ID and timestamps.
+  GET /api/users/:user_id/social-media-links
+  Retrieves all social media links for a user with optional platform filtering
 */
-app.post('/api/skills', authenticateToken, async (req, res) => {
+app.get('/api/users/:user_id/social-media-links', authenticateToken, async (req, res) => {
   try {
-    const validatedData = createSkillInputSchema.parse(req.body);
+    const { user_id } = req.params;
+    const validationResult = searchSocialMediaLinkInputSchema.safeParse({ user_id, ...req.query });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { platform, limit, offset, sort_by, sort_order } = validationResult.data;
+    
+    let sqlQuery = 'SELECT * FROM social_media_links WHERE user_id = $1';
+    const queryParams = [user_id];
+    let paramIndex = 2;
+
+    if (platform) {
+      sqlQuery += ` AND platform = $${paramIndex}`;
+      queryParams.push(platform);
+      paramIndex++;
+    }
+
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    queryParams.push(limit, offset);
 
     const client = await pool.connect();
-    try {
-      const skill_id = uuidv4();
-      const now = new Date().toISOString();
+    const result = await client.query(sqlQuery, queryParams);
+    client.release();
 
-      const result = await client.query(
-        `INSERT INTO skills (skill_id, user_id, category, name, proficiency_level, description, icon_name, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-         RETURNING skill_id, user_id, category, name, proficiency_level, description, icon_name, created_at, updated_at`,
-        [skill_id, validatedData.user_id, validatedData.category, validatedData.name, 
-         validatedData.proficiency_level, validatedData.description, validatedData.icon_name, now, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
-    }
+    res.json(result.rows);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
+    console.error('Get social media links error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  POST /api/users/:user_id/social-media-links
+  Creates a new social media link for a user
+*/
+app.post('/api/users/:user_id/social-media-links', authenticateToken, async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = createSocialMediaLinkInputSchema.safeParse({ user_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
     }
+
+    const { link_id, platform, url, display_order } = validationResult.data;
+
+    const client = await pool.connect();
+    const result = await client.query(
+      'INSERT INTO social_media_links (link_id, user_id, platform, url, display_order) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [link_id, user_id, platform, url, display_order]
+    );
+    client.release();
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Create social media link error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  GET /api/users/:user_id/social-media-links/:link_id
+  Retrieves a specific social media link by ID
+*/
+app.get('/api/users/:user_id/social-media-links/:link_id', authenticateToken, async (req, res) => {
+  try {
+    const { user_id, link_id } = req.params;
+
+    const client = await pool.connect();
+    const result = await client.query('SELECT * FROM social_media_links WHERE user_id = $1 AND link_id = $2', [user_id, link_id]);
+    client.release();
+
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Social media link not found', null, 'LINK_NOT_FOUND'));
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Get social media link error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  PATCH /api/users/:user_id/social-media-links/:link_id
+  Updates a specific social media link
+*/
+app.patch('/api/users/:user_id/social-media-links/:link_id', authenticateToken, async (req, res) => {
+  try {
+    const { user_id, link_id } = req.params;
+    const validationResult = updateSocialMediaLinkInputSchema.safeParse({ link_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'link_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    updateValues.push(user_id, link_id);
+
+    const client = await pool.connect();
+    const result = await client.query(
+      `UPDATE social_media_links SET ${updateFields.join(', ')} WHERE user_id = $${paramIndex} AND link_id = $${paramIndex + 1} RETURNING *`,
+      updateValues
+    );
+    client.release();
+
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Social media link not found', null, 'LINK_NOT_FOUND'));
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Update social media link error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  DELETE /api/users/:user_id/social-media-links/:link_id
+  Deletes a specific social media link
+*/
+app.delete('/api/users/:user_id/social-media-links/:link_id', authenticateToken, async (req, res) => {
+  try {
+    const { user_id, link_id } = req.params;
+
+    const client = await pool.connect();
+    const result = await client.query('DELETE FROM social_media_links WHERE user_id = $1 AND link_id = $2', [user_id, link_id]);
+    client.release();
+
+    if (result.rowCount === 0) {
+      return res.status(404).json(createErrorResponse('Social media link not found', null, 'LINK_NOT_FOUND'));
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    console.error('Delete social media link error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+// SKILLS ENDPOINTS
+
+/*
+  GET /api/users/:user_id/skills
+  Retrieves all skills for a user with optional filtering by category and proficiency
+*/
+app.get('/api/users/:user_id/skills', authenticateToken, async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = searchSkillInputSchema.safeParse({ user_id, ...req.query });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { category, proficiency_level, limit, offset, sort_by, sort_order } = validationResult.data;
+    
+    let sqlQuery = 'SELECT * FROM skills WHERE user_id = $1';
+    const queryParams = [user_id];
+    let paramIndex = 2;
+
+    if (category) {
+      sqlQuery += ` AND category = $${paramIndex}`;
+      queryParams.push(category);
+      paramIndex++;
+    }
+
+    if (proficiency_level) {
+      sqlQuery += ` AND proficiency_level = $${paramIndex}`;
+      queryParams.push(proficiency_level);
+      paramIndex++;
+    }
+
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    queryParams.push(limit, offset);
+
+    const client = await pool.connect();
+    const result = await client.query(sqlQuery, queryParams);
+    client.release();
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get skills error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  POST /api/users/:user_id/skills
+  Creates a new skill for a user
+*/
+app.post('/api/users/:user_id/skills', authenticateToken, async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = createSkillInputSchema.safeParse({ user_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { skill_id, name, category, proficiency_level, icon_url, description, display_order } = validationResult.data;
+
+    const client = await pool.connect();
+    const result = await client.query(
+      'INSERT INTO skills (skill_id, user_id, name, category, proficiency_level, icon_url, description, display_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [skill_id, user_id, name, category, proficiency_level, icon_url, description, display_order]
+    );
+    client.release();
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
     console.error('Create skill error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Search skills endpoint - retrieves skills with filtering by user, category, and text search.
-Supports pagination and sorting for better performance with large datasets.
+  GET /api/users/:user_id/skills/:skill_id
+  Retrieves a specific skill by ID
 */
-app.get('/api/skills', async (req, res) => {
+app.get('/api/users/:user_id/skills/:skill_id', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchSkillInputSchema.parse(req.query);
-    const { query, user_id, category, limit, offset, sort_by, sort_order } = validatedQuery;
+    const { user_id, skill_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
+    const result = await client.query('SELECT * FROM skills WHERE user_id = $1 AND skill_id = $2', [user_id, skill_id]);
+    client.release();
 
-      if (query) {
-        whereClauses.push(`(name ILIKE $${paramCounter} OR description ILIKE $${paramCounter})`);
-        queryParams.push(`%${query}%`);
-        paramCounter++;
-      }
-
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      if (category) {
-        whereClauses.push(`category = $${paramCounter}`);
-        queryParams.push(category);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM skills ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT skill_id, user_id, category, name, proficiency_level, description, icon_name, created_at, updated_at 
-        FROM skills ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        skills: result.rows,
-        total
-      });
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Skill not found', null, 'SKILL_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Search skills error:', error);
+    console.error('Get skill error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Update skill endpoint - allows authenticated users to modify existing skills.
-Validates input and updates only the provided fields.
+  PATCH /api/users/:user_id/skills/:skill_id
+  Updates a specific skill
 */
-app.patch('/api/skills/:skill_id', authenticateToken, async (req, res) => {
+app.patch('/api/users/:user_id/skills/:skill_id', authenticateToken, async (req, res) => {
   try {
-    const { skill_id } = req.params;
-    const validatedData = updateSkillInputSchema.parse({ ...req.body, skill_id });
+    const { user_id, skill_id } = req.params;
+    const validationResult = updateSkillInputSchema.safeParse({ skill_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'skill_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    updateValues.push(user_id, skill_id);
 
     const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
+    const result = await client.query(
+      `UPDATE skills SET ${updateFields.join(', ')} WHERE user_id = $${paramIndex} AND skill_id = $${paramIndex + 1} RETURNING *`,
+      updateValues
+    );
+    client.release();
 
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'skill_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      updateFields.push(`updated_at = $${paramCounter}`);
-      values.push(new Date().toISOString());
-      values.push(skill_id);
-
-      const updateQuery = `
-        UPDATE skills SET ${updateFields.join(', ')} 
-        WHERE skill_id = $${paramCounter + 1} 
-        RETURNING skill_id, user_id, category, name, proficiency_level, description, icon_name, created_at, updated_at
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Skill not found', null, 'SKILL_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Skill not found', null, 'SKILL_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
     console.error('Update skill error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Delete skill endpoint - removes a skill from the database.
-Only authenticated users can delete their own skills.
+  DELETE /api/users/:user_id/skills/:skill_id
+  Deletes a specific skill
 */
-app.delete('/api/skills/:skill_id', authenticateToken, async (req, res) => {
+app.delete('/api/users/:user_id/skills/:skill_id', authenticateToken, async (req, res) => {
   try {
-    const { skill_id } = req.params;
+    const { user_id, skill_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM skills WHERE skill_id = $1', [skill_id]);
+    const result = await client.query('DELETE FROM skills WHERE user_id = $1 AND skill_id = $2', [user_id, skill_id]);
+    client.release();
 
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Skill not found', null, 'SKILL_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
+    if (result.rowCount === 0) {
+      return res.status(404).json(createErrorResponse('Skill not found', null, 'SKILL_NOT_FOUND'));
     }
+
+    res.status(204).send();
   } catch (error) {
     console.error('Delete skill error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
+// PROJECT ENDPOINTS
+
 /*
-Create project endpoint - allows authenticated users to add new projects to their portfolio.
-Validates project data and creates comprehensive project entries.
+  GET /api/users/:user_id/projects
+  Retrieves all projects for a user with optional title filtering
 */
-app.post('/api/projects', authenticateToken, async (req, res) => {
+app.get('/api/users/:user_id/projects', authenticateToken, async (req, res) => {
   try {
-    const validatedData = createProjectInputSchema.parse(req.body);
+    const { user_id } = req.params;
+    const validationResult = searchProjectInputSchema.safeParse({ user_id, ...req.query });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { title, limit, offset, sort_by, sort_order } = validationResult.data;
+    
+    let sqlQuery = 'SELECT * FROM projects WHERE user_id = $1';
+    const queryParams = [user_id];
+    let paramIndex = 2;
+
+    if (title) {
+      sqlQuery += ` AND title ILIKE $${paramIndex}`;
+      queryParams.push(`%${title}%`);
+      paramIndex++;
+    }
+
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    queryParams.push(limit, offset);
 
     const client = await pool.connect();
-    try {
-      const project_id = uuidv4();
-      const now = new Date().toISOString();
+    const result = await client.query(sqlQuery, queryParams);
+    client.release();
 
-      const result = await client.query(
-        `INSERT INTO projects (project_id, user_id, title, description, project_type, role_in_project, 
-         problem_statement, solution_approach, technical_challenges, technologies_used, live_demo_url, 
-         github_repo_url, app_store_url, play_store_url, case_study_url, is_featured, status, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) 
-         RETURNING *`,
-        [project_id, validatedData.user_id, validatedData.title, validatedData.description, 
-         validatedData.project_type, validatedData.role_in_project, validatedData.problem_statement,
-         validatedData.solution_approach, validatedData.technical_challenges, validatedData.technologies_used,
-         validatedData.live_demo_url, validatedData.github_repo_url, validatedData.app_store_url,
-         validatedData.play_store_url, validatedData.case_study_url, validatedData.is_featured,
-         validatedData.status, now, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
-    }
+    res.json(result.rows);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
+    console.error('Get projects error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  POST /api/users/:user_id/projects
+  Creates a new project for a user
+*/
+app.post('/api/users/:user_id/projects', authenticateToken, async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = createProjectInputSchema.safeParse({ user_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
     }
+
+    const { project_id, title, short_description, description, thumbnail_url, project_url, source_code_url, tech_stack, display_order } = validationResult.data;
+    const now = new Date().toISOString();
+
+    const client = await pool.connect();
+    const result = await client.query(
+      'INSERT INTO projects (project_id, user_id, title, short_description, description, thumbnail_url, project_url, source_code_url, tech_stack, display_order, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *',
+      [project_id, user_id, title, short_description, description, thumbnail_url, project_url, source_code_url, tech_stack, display_order, now, now]
+    );
+    client.release();
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
     console.error('Create project error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Search projects endpoint - retrieves projects with comprehensive filtering and search capabilities.
-Supports filtering by user, featured status, project status, and text search across title and description.
+  GET /api/users/:user_id/projects/:project_id
+  Retrieves a specific project by ID
 */
-app.get('/api/projects', async (req, res) => {
+app.get('/api/users/:user_id/projects/:project_id', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchProjectInputSchema.parse(req.query);
-    const { query, user_id, is_featured, status, limit, offset, sort_by, sort_order } = validatedQuery;
+    const { user_id, project_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
+    const result = await client.query('SELECT * FROM projects WHERE user_id = $1 AND project_id = $2', [user_id, project_id]);
+    client.release();
 
-      if (query) {
-        whereClauses.push(`(title ILIKE $${paramCounter} OR description ILIKE $${paramCounter})`);
-        queryParams.push(`%${query}%`);
-        paramCounter++;
-      }
-
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      if (is_featured !== undefined) {
-        whereClauses.push(`is_featured = $${paramCounter}`);
-        queryParams.push(is_featured);
-        paramCounter++;
-      }
-
-      if (status) {
-        whereClauses.push(`status = $${paramCounter}`);
-        queryParams.push(status);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM projects ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM projects ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        projects: result.rows,
-        total
-      });
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Project not found', null, 'PROJECT_NOT_FOUND'));
     }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Search projects error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
 
-/*
-Get single project endpoint - retrieves detailed information for a specific project.
-Public endpoint for displaying project details in portfolios.
-*/
-app.get('/api/projects/:project_id', async (req, res) => {
-  try {
-    const { project_id } = req.params;
-    
-    const client = await pool.connect();
-    try {
-      const result = await client.query('SELECT * FROM projects WHERE project_id = $1', [project_id]);
-      
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Project not found', null, 'PROJECT_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
-    }
+    res.json(result.rows[0]);
   } catch (error) {
     console.error('Get project error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
@@ -706,2475 +843,1460 @@ app.get('/api/projects/:project_id', async (req, res) => {
 });
 
 /*
-Update project endpoint - allows authenticated users to modify existing projects.
-Comprehensive update functionality for all project fields.
+  PATCH /api/users/:user_id/projects/:project_id
+  Updates a specific project
 */
-app.patch('/api/projects/:project_id', authenticateToken, async (req, res) => {
+app.patch('/api/users/:user_id/projects/:project_id', authenticateToken, async (req, res) => {
   try {
-    const { project_id } = req.params;
-    const validatedData = updateProjectInputSchema.parse({ ...req.body, project_id });
+    const { user_id, project_id } = req.params;
+    const validationResult = updateProjectInputSchema.safeParse({ project_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'project_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    // Add updated_at timestamp
+    updateFields.push(`updated_at = $${paramIndex}`);
+    updateValues.push(new Date().toISOString());
+    paramIndex++;
+
+    updateValues.push(user_id, project_id);
 
     const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
+    const result = await client.query(
+      `UPDATE projects SET ${updateFields.join(', ')} WHERE user_id = $${paramIndex} AND project_id = $${paramIndex + 1} RETURNING *`,
+      updateValues
+    );
+    client.release();
 
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'project_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      updateFields.push(`updated_at = $${paramCounter}`);
-      values.push(new Date().toISOString());
-      values.push(project_id);
-
-      const updateQuery = `
-        UPDATE projects SET ${updateFields.join(', ')} 
-        WHERE project_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Project not found', null, 'PROJECT_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Project not found', null, 'PROJECT_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
     console.error('Update project error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Delete project endpoint - removes a project and its associated images from the database.
-Cascading delete to maintain data integrity.
+  DELETE /api/users/:user_id/projects/:project_id
+  Deletes a specific project and its associated screenshots
 */
-app.delete('/api/projects/:project_id', authenticateToken, async (req, res) => {
+app.delete('/api/users/:user_id/projects/:project_id', authenticateToken, async (req, res) => {
   try {
-    const { project_id } = req.params;
+    const { user_id, project_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      // Delete project images first (foreign key constraint)
-      await client.query('DELETE FROM project_images WHERE project_id = $1', [project_id]);
-      
-      // Delete the project
-      const result = await client.query('DELETE FROM projects WHERE project_id = $1', [project_id]);
+    
+    // Delete associated screenshots first
+    await client.query('DELETE FROM project_screenshots WHERE project_id = $1', [project_id]);
+    
+    // Delete the project
+    const result = await client.query('DELETE FROM projects WHERE user_id = $1 AND project_id = $2', [user_id, project_id]);
+    client.release();
 
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Project not found', null, 'PROJECT_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
+    if (result.rowCount === 0) {
+      return res.status(404).json(createErrorResponse('Project not found', null, 'PROJECT_NOT_FOUND'));
     }
+
+    res.status(204).send();
   } catch (error) {
     console.error('Delete project error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
+// PROJECT SCREENSHOTS ENDPOINTS
+
 /*
-Create project image endpoint - adds images to existing projects.
-Supports multiple images per project with display ordering.
+  GET /api/projects/:project_id/screenshots
+  Retrieves all screenshots for a specific project
 */
-app.post('/api/projects/:project_id/images', authenticateToken, async (req, res) => {
+app.get('/api/projects/:project_id/screenshots', authenticateToken, async (req, res) => {
   try {
     const { project_id } = req.params;
-    const validatedData = createProjectImageInputSchema.parse({ ...req.body, project_id });
+    const validationResult = searchProjectScreenshotInputSchema.safeParse({ project_id, ...req.query });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { limit, offset, sort_by, sort_order } = validationResult.data;
+    
+    const sqlQuery = `SELECT * FROM project_screenshots WHERE project_id = $1 ORDER BY ${sort_by} ${sort_order} LIMIT $2 OFFSET $3`;
 
     const client = await pool.connect();
-    try {
-      // Verify project exists
-      const projectCheck = await client.query('SELECT project_id FROM projects WHERE project_id = $1', [project_id]);
-      if (projectCheck.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Project not found', null, 'PROJECT_NOT_FOUND'));
-      }
+    const result = await client.query(sqlQuery, [project_id, limit, offset]);
+    client.release();
 
-      const image_id = uuidv4();
-      const now = new Date().toISOString();
-
-      const result = await client.query(
-        `INSERT INTO project_images (image_id, project_id, image_url, alt_text, caption, display_order, created_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7) 
-         RETURNING *`,
-        [image_id, project_id, validatedData.image_url, validatedData.alt_text, 
-         validatedData.caption, validatedData.display_order, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
-    }
+    res.json(result.rows);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Create project image error:', error);
+    console.error('Get project screenshots error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Get project images endpoint - retrieves all images associated with a specific project.
-Supports sorting by display order for proper image carousel functionality.
+  POST /api/projects/:project_id/screenshots
+  Creates a new screenshot for a project
 */
-app.get('/api/projects/:project_id/images', async (req, res) => {
+app.post('/api/projects/:project_id/screenshots', authenticateToken, async (req, res) => {
   try {
     const { project_id } = req.params;
-    const validatedQuery = searchProjectImageInputSchema.parse({ ...req.query, project_id });
-    const { limit, offset, sort_by, sort_order } = validatedQuery;
+    const validationResult = createProjectScreenshotInputSchema.safeParse({ project_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { screenshot_id, image_url, caption, display_order } = validationResult.data;
 
     const client = await pool.connect();
-    try {
-      const countQuery = `SELECT COUNT(*) FROM project_images WHERE project_id = $1`;
-      const countResult = await client.query(countQuery, [project_id]);
-      const total = parseInt(countResult.rows[0].count);
+    const result = await client.query(
+      'INSERT INTO project_screenshots (screenshot_id, project_id, image_url, caption, display_order) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [screenshot_id, project_id, image_url, caption, display_order]
+    );
+    client.release();
 
-      const selectQuery = `
-        SELECT * FROM project_images 
-        WHERE project_id = $1 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $2 OFFSET $3
-      `;
-
-      const result = await client.query(selectQuery, [project_id, limit, offset]);
-
-      res.json({
-        images: result.rows,
-        total
-      });
-    } finally {
-      client.release();
-    }
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Get project images error:', error);
+    console.error('Create screenshot error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Update project image endpoint - modifies existing project images.
-Allows updating image URLs, alt text, captions, and display order.
+  GET /api/projects/:project_id/screenshots/:screenshot_id
+  Retrieves a specific screenshot by ID
 */
-app.patch('/api/project-images/:image_id', authenticateToken, async (req, res) => {
+app.get('/api/projects/:project_id/screenshots/:screenshot_id', authenticateToken, async (req, res) => {
   try {
-    const { image_id } = req.params;
-    const validatedData = updateProjectImageInputSchema.parse({ ...req.body, image_id });
+    const { project_id, screenshot_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
+    const result = await client.query('SELECT * FROM project_screenshots WHERE project_id = $1 AND screenshot_id = $2', [project_id, screenshot_id]);
+    client.release();
 
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'image_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      values.push(image_id);
-
-      const updateQuery = `
-        UPDATE project_images SET ${updateFields.join(', ')} 
-        WHERE image_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Project image not found', null, 'PROJECT_IMAGE_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Screenshot not found', null, 'SCREENSHOT_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Update project image error:', error);
+    console.error('Get screenshot error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Delete project image endpoint - removes individual images from projects.
-Maintains project integrity while allowing image management.
+  PATCH /api/projects/:project_id/screenshots/:screenshot_id
+  Updates a specific screenshot
 */
-app.delete('/api/project-images/:image_id', authenticateToken, async (req, res) => {
+app.patch('/api/projects/:project_id/screenshots/:screenshot_id', authenticateToken, async (req, res) => {
   try {
-    const { image_id } = req.params;
+    const { project_id, screenshot_id } = req.params;
+    const validationResult = updateProjectScreenshotInputSchema.safeParse({ screenshot_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'screenshot_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    updateValues.push(project_id, screenshot_id);
 
     const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM project_images WHERE image_id = $1', [image_id]);
+    const result = await client.query(
+      `UPDATE project_screenshots SET ${updateFields.join(', ')} WHERE project_id = $${paramIndex} AND screenshot_id = $${paramIndex + 1} RETURNING *`,
+      updateValues
+    );
+    client.release();
 
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Project image not found', null, 'PROJECT_IMAGE_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Screenshot not found', null, 'SCREENSHOT_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    console.error('Delete project image error:', error);
+    console.error('Update screenshot error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Create experience endpoint - adds professional experience entries to user portfolios.
-Comprehensive work history management with company details and achievements.
+  DELETE /api/projects/:project_id/screenshots/:screenshot_id
+  Deletes a specific screenshot
 */
-app.post('/api/experiences', authenticateToken, async (req, res) => {
+app.delete('/api/projects/:project_id/screenshots/:screenshot_id', authenticateToken, async (req, res) => {
   try {
-    const validatedData = createExperienceInputSchema.parse(req.body);
+    const { project_id, screenshot_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const experience_id = uuidv4();
-      const now = new Date().toISOString();
+    const result = await client.query('DELETE FROM project_screenshots WHERE project_id = $1 AND screenshot_id = $2', [project_id, screenshot_id]);
+    client.release();
 
-      const result = await client.query(
-        `INSERT INTO experiences (experience_id, user_id, company_name, company_logo_url, job_title, 
-         start_date, end_date, is_current, location, description, technologies_used, achievements, 
-         company_website_url, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
-         RETURNING *`,
-        [experience_id, validatedData.user_id, validatedData.company_name, validatedData.company_logo_url,
-         validatedData.job_title, validatedData.start_date, validatedData.end_date, validatedData.is_current,
-         validatedData.location, validatedData.description, validatedData.technologies_used,
-         validatedData.achievements, validatedData.company_website_url, now, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rowCount === 0) {
+      return res.status(404).json(createErrorResponse('Screenshot not found', null, 'SCREENSHOT_NOT_FOUND'));
     }
+
+    res.status(204).send();
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
+    console.error('Delete screenshot error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+// EXPERIENCE ENDPOINTS
+
+/*
+  GET /api/users/:user_id/experiences
+  Retrieves all work experiences for a user with optional filtering
+*/
+app.get('/api/users/:user_id/experiences', authenticateToken, async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = searchExperienceInputSchema.safeParse({ user_id, ...req.query });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
     }
+
+    const { company_name, is_current, limit, offset, sort_by, sort_order } = validationResult.data;
+    
+    let sqlQuery = 'SELECT * FROM experiences WHERE user_id = $1';
+    const queryParams = [user_id];
+    let paramIndex = 2;
+
+    if (company_name) {
+      sqlQuery += ` AND company_name ILIKE $${paramIndex}`;
+      queryParams.push(`%${company_name}%`);
+      paramIndex++;
+    }
+
+    if (is_current !== undefined) {
+      sqlQuery += ` AND is_current = $${paramIndex}`;
+      queryParams.push(is_current);
+      paramIndex++;
+    }
+
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    queryParams.push(limit, offset);
+
+    const client = await pool.connect();
+    const result = await client.query(sqlQuery, queryParams);
+    client.release();
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get experiences error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  POST /api/users/:user_id/experiences
+  Creates a new work experience for a user
+*/
+app.post('/api/users/:user_id/experiences', authenticateToken, async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = createExperienceInputSchema.safeParse({ user_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { experience_id, role_title, company_name, company_logo_url, start_date, end_date, is_current, location, description, display_order } = validationResult.data;
+
+    const client = await pool.connect();
+    const result = await client.query(
+      'INSERT INTO experiences (experience_id, user_id, role_title, company_name, company_logo_url, start_date, end_date, is_current, location, description, display_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
+      [experience_id, user_id, role_title, company_name, company_logo_url, start_date, end_date, is_current, location, description, display_order]
+    );
+    client.release();
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
     console.error('Create experience error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Search experiences endpoint - retrieves professional experience with filtering capabilities.
-Supports filtering by user, company, and current employment status.
+  GET /api/users/:user_id/experiences/:experience_id
+  Retrieves a specific experience by ID
 */
-app.get('/api/experiences', async (req, res) => {
+app.get('/api/users/:user_id/experiences/:experience_id', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchExperienceInputSchema.parse(req.query);
-    const { user_id, company_name, is_current, limit, offset, sort_by, sort_order } = validatedQuery;
+    const { user_id, experience_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
+    const result = await client.query('SELECT * FROM experiences WHERE user_id = $1 AND experience_id = $2', [user_id, experience_id]);
+    client.release();
 
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      if (company_name) {
-        whereClauses.push(`company_name ILIKE $${paramCounter}`);
-        queryParams.push(`%${company_name}%`);
-        paramCounter++;
-      }
-
-      if (is_current !== undefined) {
-        whereClauses.push(`is_current = $${paramCounter}`);
-        queryParams.push(is_current);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM experiences ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM experiences ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        experiences: result.rows,
-        total
-      });
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Experience not found', null, 'EXPERIENCE_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Search experiences error:', error);
+    console.error('Get experience error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Update experience endpoint - modifies existing experience entries.
-Allows comprehensive updates to work history information.
+  PATCH /api/users/:user_id/experiences/:experience_id
+  Updates a specific experience
 */
-app.patch('/api/experiences/:experience_id', authenticateToken, async (req, res) => {
+app.patch('/api/users/:user_id/experiences/:experience_id', authenticateToken, async (req, res) => {
   try {
-    const { experience_id } = req.params;
-    const validatedData = updateExperienceInputSchema.parse({ ...req.body, experience_id });
+    const { user_id, experience_id } = req.params;
+    const validationResult = updateExperienceInputSchema.safeParse({ experience_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'experience_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    updateValues.push(user_id, experience_id);
 
     const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
+    const result = await client.query(
+      `UPDATE experiences SET ${updateFields.join(', ')} WHERE user_id = $${paramIndex} AND experience_id = $${paramIndex + 1} RETURNING *`,
+      updateValues
+    );
+    client.release();
 
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'experience_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      updateFields.push(`updated_at = $${paramCounter}`);
-      values.push(new Date().toISOString());
-      values.push(experience_id);
-
-      const updateQuery = `
-        UPDATE experiences SET ${updateFields.join(', ')} 
-        WHERE experience_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Experience not found', null, 'EXPERIENCE_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Experience not found', null, 'EXPERIENCE_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
     console.error('Update experience error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Delete experience endpoint - removes work experience entries.
-Maintains portfolio integrity while allowing experience management.
+  DELETE /api/users/:user_id/experiences/:experience_id
+  Deletes a specific experience
 */
-app.delete('/api/experiences/:experience_id', authenticateToken, async (req, res) => {
+app.delete('/api/users/:user_id/experiences/:experience_id', authenticateToken, async (req, res) => {
   try {
-    const { experience_id } = req.params;
+    const { user_id, experience_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM experiences WHERE experience_id = $1', [experience_id]);
+    const result = await client.query('DELETE FROM experiences WHERE user_id = $1 AND experience_id = $2', [user_id, experience_id]);
+    client.release();
 
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Experience not found', null, 'EXPERIENCE_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
+    if (result.rowCount === 0) {
+      return res.status(404).json(createErrorResponse('Experience not found', null, 'EXPERIENCE_NOT_FOUND'));
     }
+
+    res.status(204).send();
   } catch (error) {
     console.error('Delete experience error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
+// EDUCATION ENDPOINTS
+
 /*
-Create education endpoint - adds educational background to user portfolios.
-Comprehensive academic history management with institution details.
+  GET /api/users/:user_id/education
+  Retrieves all education entries for a user with optional filtering
 */
-app.post('/api/educations', authenticateToken, async (req, res) => {
+app.get('/api/users/:user_id/education', authenticateToken, async (req, res) => {
   try {
-    const validatedData = createEducationInputSchema.parse(req.body);
+    const { user_id } = req.params;
+    const validationResult = searchEducationInputSchema.safeParse({ user_id, ...req.query });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { institution_name, degree, is_current, limit, offset, sort_by, sort_order } = validationResult.data;
+    
+    let sqlQuery = 'SELECT * FROM education WHERE user_id = $1';
+    const queryParams = [user_id];
+    let paramIndex = 2;
+
+    if (institution_name) {
+      sqlQuery += ` AND institution_name ILIKE $${paramIndex}`;
+      queryParams.push(`%${institution_name}%`);
+      paramIndex++;
+    }
+
+    if (degree) {
+      sqlQuery += ` AND degree ILIKE $${paramIndex}`;
+      queryParams.push(`%${degree}%`);
+      paramIndex++;
+    }
+
+    if (is_current !== undefined) {
+      sqlQuery += ` AND is_current = $${paramIndex}`;
+      queryParams.push(is_current);
+      paramIndex++;
+    }
+
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    queryParams.push(limit, offset);
 
     const client = await pool.connect();
-    try {
-      const education_id = uuidv4();
-      const now = new Date().toISOString();
+    const result = await client.query(sqlQuery, queryParams);
+    client.release();
 
-      const result = await client.query(
-        `INSERT INTO educations (education_id, user_id, institution_name, degree, field_of_study, 
-         start_date, end_date, grade, description, institution_website_url, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
-         RETURNING *`,
-        [education_id, validatedData.user_id, validatedData.institution_name, validatedData.degree,
-         validatedData.field_of_study, validatedData.start_date, validatedData.end_date,
-         validatedData.grade, validatedData.description, validatedData.institution_website_url, now, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
-    }
+    res.json(result.rows);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
+    console.error('Get education error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  POST /api/users/:user_id/education
+  Creates a new education entry for a user
+*/
+app.post('/api/users/:user_id/education', authenticateToken, async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = createEducationInputSchema.safeParse({ user_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
     }
+
+    const { education_id, institution_name, degree, institution_logo_url, start_date, end_date, is_current, location, description, display_order } = validationResult.data;
+
+    const client = await pool.connect();
+    const result = await client.query(
+      'INSERT INTO education (education_id, user_id, institution_name, degree, institution_logo_url, start_date, end_date, is_current, location, description, display_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
+      [education_id, user_id, institution_name, degree, institution_logo_url, start_date, end_date, is_current, location, description, display_order]
+    );
+    client.release();
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
     console.error('Create education error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Search educations endpoint - retrieves educational background with filtering.
-Supports searching by user, institution, and degree type.
+  GET /api/users/:user_id/education/:education_id
+  Retrieves a specific education entry by ID
 */
-app.get('/api/educations', async (req, res) => {
+app.get('/api/users/:user_id/education/:education_id', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchEducationInputSchema.parse(req.query);
-    const { user_id, institution_name, degree, limit, offset, sort_by, sort_order } = validatedQuery;
+    const { user_id, education_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
+    const result = await client.query('SELECT * FROM education WHERE user_id = $1 AND education_id = $2', [user_id, education_id]);
+    client.release();
 
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      if (institution_name) {
-        whereClauses.push(`institution_name ILIKE $${paramCounter}`);
-        queryParams.push(`%${institution_name}%`);
-        paramCounter++;
-      }
-
-      if (degree) {
-        whereClauses.push(`degree ILIKE $${paramCounter}`);
-        queryParams.push(`%${degree}%`);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM educations ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM educations ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        educations: result.rows,
-        total
-      });
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Education entry not found', null, 'EDUCATION_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Search educations error:', error);
+    console.error('Get education error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Update education endpoint - modifies existing education entries.
-Comprehensive academic history update functionality.
+  PATCH /api/users/:user_id/education/:education_id
+  Updates a specific education entry
 */
-app.patch('/api/educations/:education_id', authenticateToken, async (req, res) => {
+app.patch('/api/users/:user_id/education/:education_id', authenticateToken, async (req, res) => {
   try {
-    const { education_id } = req.params;
-    const validatedData = updateEducationInputSchema.parse({ ...req.body, education_id });
+    const { user_id, education_id } = req.params;
+    const validationResult = updateEducationInputSchema.safeParse({ education_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'education_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    updateValues.push(user_id, education_id);
 
     const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
+    const result = await client.query(
+      `UPDATE education SET ${updateFields.join(', ')} WHERE user_id = $${paramIndex} AND education_id = $${paramIndex + 1} RETURNING *`,
+      updateValues
+    );
+    client.release();
 
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'education_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      updateFields.push(`updated_at = $${paramCounter}`);
-      values.push(new Date().toISOString());
-      values.push(education_id);
-
-      const updateQuery = `
-        UPDATE educations SET ${updateFields.join(', ')} 
-        WHERE education_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Education not found', null, 'EDUCATION_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Education entry not found', null, 'EDUCATION_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
     console.error('Update education error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Delete education endpoint - removes educational entries from portfolios.
-Maintains data integrity while allowing education management.
+  DELETE /api/users/:user_id/education/:education_id
+  Deletes a specific education entry
 */
-app.delete('/api/educations/:education_id', authenticateToken, async (req, res) => {
+app.delete('/api/users/:user_id/education/:education_id', authenticateToken, async (req, res) => {
   try {
-    const { education_id } = req.params;
+    const { user_id, education_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM educations WHERE education_id = $1', [education_id]);
+    const result = await client.query('DELETE FROM education WHERE user_id = $1 AND education_id = $2', [user_id, education_id]);
+    client.release();
 
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Education not found', null, 'EDUCATION_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
+    if (result.rowCount === 0) {
+      return res.status(404).json(createErrorResponse('Education entry not found', null, 'EDUCATION_NOT_FOUND'));
     }
+
+    res.status(204).send();
   } catch (error) {
     console.error('Delete education error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
-/*
-Create certification endpoint - adds professional certifications to portfolios.
-Comprehensive certification management with expiration tracking.
-*/
-app.post('/api/certifications', authenticateToken, async (req, res) => {
-  try {
-    const validatedData = createCertificationInputSchema.parse(req.body);
-
-    const client = await pool.connect();
-    try {
-      const certification_id = uuidv4();
-      const now = new Date().toISOString();
-
-      const result = await client.query(
-        `INSERT INTO certifications (certification_id, user_id, name, issuing_organization, 
-         issue_date, expiration_date, credential_id, credential_url, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-         RETURNING *`,
-        [certification_id, validatedData.user_id, validatedData.name, validatedData.issuing_organization,
-         validatedData.issue_date, validatedData.expiration_date, validatedData.credential_id,
-         validatedData.credential_url, now, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Create certification error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
+// KEY FACTS ENDPOINTS
 
 /*
-Search certifications endpoint - retrieves certifications with expiration filtering.
-Supports filtering by user, issuing organization, and expiration status.
+  GET /api/users/:user_id/key-facts
+  Retrieves all key facts for a user
 */
-app.get('/api/certifications', async (req, res) => {
+app.get('/api/users/:user_id/key-facts', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchCertificationInputSchema.parse(req.query);
-    const { user_id, issuing_organization, has_expired, limit, offset, sort_by, sort_order } = validatedQuery;
-
-    const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
-
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      if (issuing_organization) {
-        whereClauses.push(`issuing_organization ILIKE $${paramCounter}`);
-        queryParams.push(`%${issuing_organization}%`);
-        paramCounter++;
-      }
-
-      if (has_expired !== undefined) {
-        if (has_expired) {
-          whereClauses.push(`expiration_date IS NOT NULL AND expiration_date < NOW()`);
-        } else {
-          whereClauses.push(`(expiration_date IS NULL OR expiration_date >= NOW())`);
-        }
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM certifications ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM certifications ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        certifications: result.rows,
-        total
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Search certifications error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Update certification endpoint - modifies existing certification entries.
-Allows updating all certification details including expiration dates.
-*/
-app.patch('/api/certifications/:certification_id', authenticateToken, async (req, res) => {
-  try {
-    const { certification_id } = req.params;
-    const validatedData = updateCertificationInputSchema.parse({ ...req.body, certification_id });
-
-    const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
-
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'certification_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      updateFields.push(`updated_at = $${paramCounter}`);
-      values.push(new Date().toISOString());
-      values.push(certification_id);
-
-      const updateQuery = `
-        UPDATE certifications SET ${updateFields.join(', ')} 
-        WHERE certification_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Certification not found', null, 'CERTIFICATION_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Update certification error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Delete certification endpoint - removes certification entries from portfolios.
-Maintains portfolio integrity while allowing certification management.
-*/
-app.delete('/api/certifications/:certification_id', authenticateToken, async (req, res) => {
-  try {
-    const { certification_id } = req.params;
-
-    const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM certifications WHERE certification_id = $1', [certification_id]);
-
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Certification not found', null, 'CERTIFICATION_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Delete certification error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Create blog post endpoint - adds blog posts to user portfolios.
-Comprehensive content management with SEO metadata and publishing controls.
-*/
-app.post('/api/blog-posts', authenticateToken, async (req, res) => {
-  try {
-    const validatedData = createBlogPostInputSchema.parse(req.body);
-
-    const client = await pool.connect();
-    try {
-      const post_id = uuidv4();
-      const now = new Date().toISOString();
-
-      const result = await client.query(
-        `INSERT INTO blog_posts (post_id, user_id, title, slug, excerpt, content, published_at, 
-         is_published, read_time_minutes, tags, meta_title, meta_description, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
-         RETURNING *`,
-        [post_id, validatedData.user_id, validatedData.title, validatedData.slug, validatedData.excerpt,
-         validatedData.content, validatedData.published_at, validatedData.is_published,
-         validatedData.read_time_minutes, validatedData.tags, validatedData.meta_title,
-         validatedData.meta_description, now, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Create blog post error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Search blog posts endpoint - retrieves blog posts with comprehensive filtering.
-Supports content search, publication status filtering, and tag-based filtering.
-*/
-app.get('/api/blog-posts', async (req, res) => {
-  try {
-    const validatedQuery = searchBlogPostInputSchema.parse(req.query);
-    const { query, user_id, is_published, tags, limit, offset, sort_by, sort_order } = validatedQuery;
-
-    const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
-
-      if (query) {
-        whereClauses.push(`(title ILIKE $${paramCounter} OR content ILIKE $${paramCounter} OR excerpt ILIKE $${paramCounter})`);
-        queryParams.push(`%${query}%`);
-        paramCounter++;
-      }
-
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      if (is_published !== undefined) {
-        whereClauses.push(`is_published = $${paramCounter}`);
-        queryParams.push(is_published);
-        paramCounter++;
-      }
-
-      if (tags) {
-        whereClauses.push(`tags ILIKE $${paramCounter}`);
-        queryParams.push(`%${tags}%`);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM blog_posts ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM blog_posts ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        posts: result.rows,
-        total
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Search blog posts error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Get single blog post endpoint - retrieves detailed information for a specific blog post.
-Public endpoint for displaying blog content in portfolios.
-*/
-app.get('/api/blog-posts/:post_id', async (req, res) => {
-  try {
-    const { post_id } = req.params;
+    const { user_id } = req.params;
+    const validationResult = searchKeyFactInputSchema.safeParse({ user_id, ...req.query });
     
-    const client = await pool.connect();
-    try {
-      const result = await client.query('SELECT * FROM blog_posts WHERE post_id = $1', [post_id]);
-      
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Blog post not found', null, 'BLOG_POST_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
     }
-  } catch (error) {
-    console.error('Get blog post error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
 
-/*
-Update blog post endpoint - modifies existing blog posts.
-Comprehensive content management with publication controls.
-*/
-app.patch('/api/blog-posts/:post_id', authenticateToken, async (req, res) => {
-  try {
-    const { post_id } = req.params;
-    const validatedData = updateBlogPostInputSchema.parse({ ...req.body, post_id });
-
-    const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
-
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'post_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      updateFields.push(`updated_at = $${paramCounter}`);
-      values.push(new Date().toISOString());
-      values.push(post_id);
-
-      const updateQuery = `
-        UPDATE blog_posts SET ${updateFields.join(', ')} 
-        WHERE post_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Blog post not found', null, 'BLOG_POST_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Update blog post error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Delete blog post endpoint - removes blog posts from portfolios.
-Maintains content integrity while allowing blog management.
-*/
-app.delete('/api/blog-posts/:post_id', authenticateToken, async (req, res) => {
-  try {
-    const { post_id } = req.params;
-
-    const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM blog_posts WHERE post_id = $1', [post_id]);
-
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Blog post not found', null, 'BLOG_POST_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Delete blog post error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Create contact message endpoint - handles contact form submissions from visitors.
-Public endpoint with visitor tracking and spam protection considerations.
-*/
-app.post('/api/contact-messages', async (req, res) => {
-  try {
-    const visitorIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const userAgent = req.headers['user-agent'];
+    const { limit, offset, sort_by, sort_order } = validationResult.data;
     
-    const validatedData = createContactMessageInputSchema.parse({
-      ...req.body,
-      ip_address: visitorIP,
-      user_agent: userAgent
+    const sqlQuery = `SELECT * FROM key_facts WHERE user_id = $1 ORDER BY ${sort_by} ${sort_order} LIMIT $2 OFFSET $3`;
+
+    const client = await pool.connect();
+    const result = await client.query(sqlQuery, [user_id, limit, offset]);
+    client.release();
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get key facts error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  POST /api/users/:user_id/key-facts
+  Creates a new key fact for a user
+*/
+app.post('/api/users/:user_id/key-facts', authenticateToken, async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = createKeyFactInputSchema.safeParse({ user_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { fact_id, content, display_order } = validationResult.data;
+
+    const client = await pool.connect();
+    const result = await client.query(
+      'INSERT INTO key_facts (fact_id, user_id, content, display_order) VALUES ($1, $2, $3, $4) RETURNING *',
+      [fact_id, user_id, content, display_order]
+    );
+    client.release();
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Create key fact error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  GET /api/users/:user_id/key-facts/:fact_id
+  Retrieves a specific key fact by ID
+*/
+app.get('/api/users/:user_id/key-facts/:fact_id', authenticateToken, async (req, res) => {
+  try {
+    const { user_id, fact_id } = req.params;
+
+    const client = await pool.connect();
+    const result = await client.query('SELECT * FROM key_facts WHERE user_id = $1 AND fact_id = $2', [user_id, fact_id]);
+    client.release();
+
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Key fact not found', null, 'KEY_FACT_NOT_FOUND'));
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Get key fact error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  PATCH /api/users/:user_id/key-facts/:fact_id
+  Updates a specific key fact
+*/
+app.patch('/api/users/:user_id/key-facts/:fact_id', authenticateToken, async (req, res) => {
+  try {
+    const { user_id, fact_id } = req.params;
+    const validationResult = updateKeyFactInputSchema.safeParse({ fact_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'fact_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
     });
 
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    updateValues.push(user_id, fact_id);
+
     const client = await pool.connect();
-    try {
-      const message_id = uuidv4();
-      const now = new Date().toISOString();
+    const result = await client.query(
+      `UPDATE key_facts SET ${updateFields.join(', ')} WHERE user_id = $${paramIndex} AND fact_id = $${paramIndex + 1} RETURNING *`,
+      updateValues
+    );
+    client.release();
 
-      const result = await client.query(
-        `INSERT INTO contact_messages (message_id, name, email, subject, message, ip_address, user_agent, created_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-         RETURNING *`,
-        [message_id, validatedData.name, validatedData.email, validatedData.subject, 
-         validatedData.message, validatedData.ip_address, validatedData.user_agent, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Key fact not found', null, 'KEY_FACT_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Create contact message error:', error);
+    console.error('Update key fact error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Search contact messages endpoint - retrieves contact messages for portfolio owners.
-Protected endpoint for managing incoming contact form submissions.
+  DELETE /api/users/:user_id/key-facts/:fact_id
+  Deletes a specific key fact
 */
-app.get('/api/contact-messages', authenticateToken, async (req, res) => {
+app.delete('/api/users/:user_id/key-facts/:fact_id', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchContactMessageInputSchema.parse(req.query);
-    const { query, email, limit, offset, sort_by, sort_order } = validatedQuery;
+    const { user_id, fact_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
+    const result = await client.query('DELETE FROM key_facts WHERE user_id = $1 AND fact_id = $2', [user_id, fact_id]);
+    client.release();
 
-      if (query) {
-        whereClauses.push(`(name ILIKE $${paramCounter} OR message ILIKE $${paramCounter})`);
-        queryParams.push(`%${query}%`);
-        paramCounter++;
-      }
-
-      if (email) {
-        whereClauses.push(`email ILIKE $${paramCounter}`);
-        queryParams.push(`%${email}%`);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM contact_messages ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM contact_messages ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        messages: result.rows,
-        total
-      });
-    } finally {
-      client.release();
+    if (result.rowCount === 0) {
+      return res.status(404).json(createErrorResponse('Key fact not found', null, 'KEY_FACT_NOT_FOUND'));
     }
+
+    res.status(204).send();
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
+    console.error('Delete key fact error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+// RESUME DOWNLOADS ENDPOINTS
+
+/*
+  @@need:external-api: PDF/Document generation service to create resume files in various formats (PDF, DOCX) from user portfolio data
+*/
+async function generate_resume_file({ user_id, file_format, user_data }) {
+  // Mock resume generation - in production this would interface with a PDF generation service
+  const mock_download_url = `https://storage.example.com/resumes/${user_id}_resume_${Date.now()}.${file_format}`;
+  
+  return {
+    download_url: mock_download_url,
+    file_size: 245760, // Mock file size in bytes
+    generated_at: new Date().toISOString()
+  };
+}
+
+/*
+  GET /api/users/:user_id/resume-downloads
+  Retrieves all resume download records for a user
+*/
+app.get('/api/users/:user_id/resume-downloads', authenticateToken, async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = searchResumeDownloadInputSchema.safeParse({ user_id, ...req.query });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
     }
-    console.error('Search contact messages error:', error);
+
+    const { file_format, limit, offset, sort_by, sort_order } = validationResult.data;
+    
+    let sqlQuery = 'SELECT * FROM resume_downloads WHERE user_id = $1';
+    const queryParams = [user_id];
+    let paramIndex = 2;
+
+    if (file_format) {
+      sqlQuery += ` AND file_format = $${paramIndex}`;
+      queryParams.push(file_format);
+      paramIndex++;
+    }
+
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    queryParams.push(limit, offset);
+
+    const client = await pool.connect();
+    const result = await client.query(sqlQuery, queryParams);
+    client.release();
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get resume downloads error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Update contact message endpoint - allows modifying contact message status or notes.
-Administrative function for managing contact form submissions.
+  POST /api/users/:user_id/resume-downloads
+  Creates a new resume download record and generates the file
 */
-app.patch('/api/contact-messages/:message_id', authenticateToken, async (req, res) => {
+app.post('/api/users/:user_id/resume-downloads', authenticateToken, async (req, res) => {
   try {
-    const { message_id } = req.params;
-    const validatedData = updateContactMessageInputSchema.parse({ ...req.body, message_id });
+    const { user_id } = req.params;
+    const validationResult = createResumeDownloadInputSchema.safeParse({ user_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { download_id, file_format } = validationResult.data;
+    const now = new Date().toISOString();
+
+    // Generate resume file (mock implementation)
+    const file_data = await generate_resume_file({ user_id, file_format, user_data: {} });
 
     const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
+    const result = await client.query(
+      'INSERT INTO resume_downloads (download_id, user_id, file_format, download_url, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [download_id, user_id, file_format, file_data.download_url, now]
+    );
+    client.release();
 
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'message_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      values.push(message_id);
-
-      const updateQuery = `
-        UPDATE contact_messages SET ${updateFields.join(', ')} 
-        WHERE message_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Contact message not found', null, 'CONTACT_MESSAGE_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
-    }
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Update contact message error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Delete contact message endpoint - removes contact messages from the system.
-Administrative function for contact form management.
-*/
-app.delete('/api/contact-messages/:message_id', authenticateToken, async (req, res) => {
-  try {
-    const { message_id } = req.params;
-
-    const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM contact_messages WHERE message_id = $1', [message_id]);
-
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Contact message not found', null, 'CONTACT_MESSAGE_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Delete contact message error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Create resume download endpoint - manages resume files for portfolios.
-Allows portfolio owners to upload and manage downloadable resume files.
-*/
-app.post('/api/resume-downloads', authenticateToken, async (req, res) => {
-  try {
-    const validatedData = createResumeDownloadInputSchema.parse(req.body);
-
-    const client = await pool.connect();
-    try {
-      const download_id = uuidv4();
-      const now = new Date().toISOString();
-
-      const result = await client.query(
-        `INSERT INTO resume_downloads (download_id, user_id, download_url, file_size_bytes, created_at) 
-         VALUES ($1, $2, $3, $4, $5) 
-         RETURNING *`,
-        [download_id, validatedData.user_id, validatedData.download_url, validatedData.file_size_bytes, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
     console.error('Create resume download error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Search resume downloads endpoint - retrieves available resume files.
-Supports filtering by user for portfolio-specific resume management.
+  GET /api/users/:user_id/resume-downloads/:download_id
+  Retrieves a specific resume download record by ID
 */
-app.get('/api/resume-downloads', async (req, res) => {
+app.get('/api/users/:user_id/resume-downloads/:download_id', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchResumeDownloadInputSchema.parse(req.query);
-    const { user_id, limit, offset, sort_by, sort_order } = validatedQuery;
+    const { user_id, download_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
+    const result = await client.query('SELECT * FROM resume_downloads WHERE user_id = $1 AND download_id = $2', [user_id, download_id]);
+    client.release();
 
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM resume_downloads ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM resume_downloads ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        downloads: result.rows,
-        total
-      });
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Resume download not found', null, 'DOWNLOAD_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Search resume downloads error:', error);
+    console.error('Get resume download error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Update resume download endpoint - modifies existing resume entries.
-Allows updating resume URLs and file metadata.
+  PATCH /api/users/:user_id/resume-downloads/:download_id
+  Updates a specific resume download record
 */
-app.patch('/api/resume-downloads/:download_id', authenticateToken, async (req, res) => {
+app.patch('/api/users/:user_id/resume-downloads/:download_id', authenticateToken, async (req, res) => {
   try {
-    const { download_id } = req.params;
-    const validatedData = updateResumeDownloadInputSchema.parse({ ...req.body, download_id });
+    const { user_id, download_id } = req.params;
+    const validationResult = updateResumeDownloadInputSchema.safeParse({ download_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'download_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    updateValues.push(user_id, download_id);
 
     const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
+    const result = await client.query(
+      `UPDATE resume_downloads SET ${updateFields.join(', ')} WHERE user_id = $${paramIndex} AND download_id = $${paramIndex + 1} RETURNING *`,
+      updateValues
+    );
+    client.release();
 
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'download_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      values.push(download_id);
-
-      const updateQuery = `
-        UPDATE resume_downloads SET ${updateFields.join(', ')} 
-        WHERE download_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Resume download not found', null, 'RESUME_DOWNLOAD_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Resume download not found', null, 'DOWNLOAD_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
     console.error('Update resume download error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Delete resume download endpoint - removes resume entries from portfolios.
-Allows portfolio owners to manage their downloadable resumes.
+  DELETE /api/users/:user_id/resume-downloads/:download_id
+  Deletes a specific resume download record
 */
-app.delete('/api/resume-downloads/:download_id', authenticateToken, async (req, res) => {
+app.delete('/api/users/:user_id/resume-downloads/:download_id', authenticateToken, async (req, res) => {
   try {
-    const { download_id } = req.params;
+    const { user_id, download_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM resume_downloads WHERE download_id = $1', [download_id]);
+    const result = await client.query('DELETE FROM resume_downloads WHERE user_id = $1 AND download_id = $2', [user_id, download_id]);
+    client.release();
 
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Resume download not found', null, 'RESUME_DOWNLOAD_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
+    if (result.rowCount === 0) {
+      return res.status(404).json(createErrorResponse('Resume download not found', null, 'DOWNLOAD_NOT_FOUND'));
     }
+
+    res.status(204).send();
   } catch (error) {
     console.error('Delete resume download error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
-/*
-Create site settings endpoint - manages portfolio website configuration.
-Comprehensive settings management for SEO, legal content, and analytics.
-*/
-app.post('/api/site-settings', authenticateToken, async (req, res) => {
-  try {
-    const validatedData = createSiteSettingInputSchema.parse(req.body);
-
-    const client = await pool.connect();
-    try {
-      const setting_id = uuidv4();
-      const now = new Date().toISOString();
-
-      const result = await client.query(
-        `INSERT INTO site_settings (setting_id, user_id, privacy_policy_content, terms_of_service_content, 
-         cookie_policy_content, seo_meta_title, seo_meta_description, google_analytics_id, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-         RETURNING *`,
-        [setting_id, validatedData.user_id, validatedData.privacy_policy_content, validatedData.terms_of_service_content,
-         validatedData.cookie_policy_content, validatedData.seo_meta_title, validatedData.seo_meta_description,
-         validatedData.google_analytics_id, now, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Create site settings error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
+// CONTACT MESSAGES ENDPOINTS
 
 /*
-Search site settings endpoint - retrieves website configuration settings.
-Supports filtering by user for multi-user portfolio platforms.
+  GET /api/users/:user_id/contact-messages
+  Retrieves all contact messages for a user with optional filtering
 */
-app.get('/api/site-settings', async (req, res) => {
+app.get('/api/users/:user_id/contact-messages', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchSiteSettingInputSchema.parse(req.query);
-    const { user_id, limit, offset, sort_by, sort_order } = validatedQuery;
-
-    const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
-
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM site_settings ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM site_settings ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        settings: result.rows,
-        total
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Search site settings error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Update site settings endpoint - modifies website configuration.
-Comprehensive settings update for portfolio customization.
-*/
-app.patch('/api/site-settings/:setting_id', authenticateToken, async (req, res) => {
-  try {
-    const { setting_id } = req.params;
-    const validatedData = updateSiteSettingInputSchema.parse({ ...req.body, setting_id });
-
-    const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
-
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'setting_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      updateFields.push(`updated_at = $${paramCounter}`);
-      values.push(new Date().toISOString());
-      values.push(setting_id);
-
-      const updateQuery = `
-        UPDATE site_settings SET ${updateFields.join(', ')} 
-        WHERE setting_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Site settings not found', null, 'SITE_SETTINGS_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Update site settings error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Delete site settings endpoint - removes website configuration.
-Administrative function for settings management.
-*/
-app.delete('/api/site-settings/:setting_id', authenticateToken, async (req, res) => {
-  try {
-    const { setting_id } = req.params;
-
-    const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM site_settings WHERE setting_id = $1', [setting_id]);
-
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Site settings not found', null, 'SITE_SETTINGS_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Delete site settings error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Create testimonial endpoint - adds client testimonials to portfolios.
-Comprehensive testimonial management with ratings and project references.
-*/
-app.post('/api/testimonials', authenticateToken, async (req, res) => {
-  try {
-    const validatedData = createTestimonialInputSchema.parse(req.body);
-
-    const client = await pool.connect();
-    try {
-      const testimonial_id = uuidv4();
-      const now = new Date().toISOString();
-
-      const result = await client.query(
-        `INSERT INTO testimonials (testimonial_id, user_id, client_name, client_position, company_name, 
-         content, rating, client_photo_url, project_reference, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
-         RETURNING *`,
-        [testimonial_id, validatedData.user_id, validatedData.client_name, validatedData.client_position,
-         validatedData.company_name, validatedData.content, validatedData.rating, validatedData.client_photo_url,
-         validatedData.project_reference, now, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Create testimonial error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Search testimonials endpoint - retrieves client testimonials with filtering.
-Supports filtering by user, project, company, and rating for social proof management.
-*/
-app.get('/api/testimonials', async (req, res) => {
-  try {
-    const validatedQuery = searchTestimonialInputSchema.parse(req.query);
-    const { user_id, project_reference, company_name, min_rating, limit, offset, sort_by, sort_order } = validatedQuery;
-
-    const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
-
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      if (project_reference) {
-        whereClauses.push(`project_reference = $${paramCounter}`);
-        queryParams.push(project_reference);
-        paramCounter++;
-      }
-
-      if (company_name) {
-        whereClauses.push(`company_name ILIKE $${paramCounter}`);
-        queryParams.push(`%${company_name}%`);
-        paramCounter++;
-      }
-
-      if (min_rating) {
-        whereClauses.push(`rating >= $${paramCounter}`);
-        queryParams.push(min_rating);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM testimonials ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM testimonials ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        testimonials: result.rows,
-        total
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Search testimonials error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Update testimonial endpoint - modifies existing testimonial entries.
-Comprehensive testimonial management for social proof optimization.
-*/
-app.patch('/api/testimonials/:testimonial_id', authenticateToken, async (req, res) => {
-  try {
-    const { testimonial_id } = req.params;
-    const validatedData = updateTestimonialInputSchema.parse({ ...req.body, testimonial_id });
-
-    const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
-
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'testimonial_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      updateFields.push(`updated_at = $${paramCounter}`);
-      values.push(new Date().toISOString());
-      values.push(testimonial_id);
-
-      const updateQuery = `
-        UPDATE testimonials SET ${updateFields.join(', ')} 
-        WHERE testimonial_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Testimonial not found', null, 'TESTIMONIAL_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Update testimonial error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Delete testimonial endpoint - removes testimonial entries from portfolios.
-Maintains social proof integrity while allowing testimonial management.
-*/
-app.delete('/api/testimonials/:testimonial_id', authenticateToken, async (req, res) => {
-  try {
-    const { testimonial_id } = req.params;
-
-    const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM testimonials WHERE testimonial_id = $1', [testimonial_id]);
-
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Testimonial not found', null, 'TESTIMONIAL_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Delete testimonial error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Create social media link endpoint - manages social media presence in portfolios.
-Supports multiple platforms with display ordering for consistent presentation.
-*/
-app.post('/api/social-media-links', authenticateToken, async (req, res) => {
-  try {
-    const validatedData = createSocialMediaLinkInputSchema.parse(req.body);
-
-    const client = await pool.connect();
-    try {
-      const link_id = uuidv4();
-      const now = new Date().toISOString();
-
-      const result = await client.query(
-        `INSERT INTO social_media_links (link_id, user_id, platform, url, display_order, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7) 
-         RETURNING *`,
-        [link_id, validatedData.user_id, validatedData.platform, validatedData.url, 
-         validatedData.display_order, now, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Create social media link error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Search social media links endpoint - retrieves social media links with platform filtering.
-Supports ordering for consistent social media presentation in portfolios.
-*/
-app.get('/api/social-media-links', async (req, res) => {
-  try {
-    const validatedQuery = searchSocialMediaLinkInputSchema.parse(req.query);
-    const { user_id, platform, limit, offset, sort_by, sort_order } = validatedQuery;
-
-    const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
-
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      if (platform) {
-        whereClauses.push(`platform = $${paramCounter}`);
-        queryParams.push(platform);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM social_media_links ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM social_media_links ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        links: result.rows,
-        total
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Search social media links error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Update social media link endpoint - modifies existing social media links.
-Allows updating URLs, platforms, and display ordering.
-*/
-app.patch('/api/social-media-links/:link_id', authenticateToken, async (req, res) => {
-  try {
-    const { link_id } = req.params;
-    const validatedData = updateSocialMediaLinkInputSchema.parse({ ...req.body, link_id });
-
-    const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
-
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'link_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      updateFields.push(`updated_at = $${paramCounter}`);
-      values.push(new Date().toISOString());
-      values.push(link_id);
-
-      const updateQuery = `
-        UPDATE social_media_links SET ${updateFields.join(', ')} 
-        WHERE link_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Social media link not found', null, 'SOCIAL_MEDIA_LINK_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Update social media link error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Delete social media link endpoint - removes social media links from portfolios.
-Maintains social media presence integrity while allowing link management.
-*/
-app.delete('/api/social-media-links/:link_id', authenticateToken, async (req, res) => {
-  try {
-    const { link_id } = req.params;
-
-    const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM social_media_links WHERE link_id = $1', [link_id]);
-
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Social media link not found', null, 'SOCIAL_MEDIA_LINK_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Delete social media link error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Create page visit endpoint - tracks visitor analytics for portfolio pages.
-Public endpoint for recording page visits with visitor metadata.
-*/
-app.post('/api/page-visits', async (req, res) => {
-  try {
-    const visitorIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const userAgent = req.headers['user-agent'];
-    const referrer = req.headers['referer'];
+    const { user_id } = req.params;
+    const validationResult = searchContactMessageInputSchema.safeParse({ user_id, ...req.query });
     
-    const validatedData = createPageVisitInputSchema.parse({
-      ...req.body,
-      ip_address: visitorIP,
-      user_agent: userAgent,
-      referrer: referrer
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { sender_email, status, limit, offset, sort_by, sort_order } = validationResult.data;
+    
+    let sqlQuery = 'SELECT * FROM contact_messages WHERE user_id = $1';
+    const queryParams = [user_id];
+    let paramIndex = 2;
+
+    if (sender_email) {
+      sqlQuery += ` AND sender_email = $${paramIndex}`;
+      queryParams.push(sender_email);
+      paramIndex++;
+    }
+
+    if (status) {
+      sqlQuery += ` AND status = $${paramIndex}`;
+      queryParams.push(status);
+      paramIndex++;
+    }
+
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    queryParams.push(limit, offset);
+
+    const client = await pool.connect();
+    const result = await client.query(sqlQuery, queryParams);
+    client.release();
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get contact messages error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  POST /api/users/:user_id/contact-messages
+  Creates a new contact message from a visitor
+*/
+app.post('/api/users/:user_id/contact-messages', async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = createContactMessageInputSchema.safeParse({ user_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { message_id, sender_name, sender_email, sender_phone, message_content, status } = validationResult.data;
+    const now = new Date().toISOString();
+
+    const client = await pool.connect();
+    const result = await client.query(
+      'INSERT INTO contact_messages (message_id, user_id, sender_name, sender_email, sender_phone, message_content, sent_at, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [message_id, user_id, sender_name, sender_email, sender_phone, message_content, now, status || 'pending']
+    );
+    client.release();
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Create contact message error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  GET /api/users/:user_id/contact-messages/:message_id
+  Retrieves a specific contact message by ID
+*/
+app.get('/api/users/:user_id/contact-messages/:message_id', authenticateToken, async (req, res) => {
+  try {
+    const { user_id, message_id } = req.params;
+
+    const client = await pool.connect();
+    const result = await client.query('SELECT * FROM contact_messages WHERE user_id = $1 AND message_id = $2', [user_id, message_id]);
+    client.release();
+
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Contact message not found', null, 'MESSAGE_NOT_FOUND'));
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Get contact message error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+/*
+  PATCH /api/users/:user_id/contact-messages/:message_id
+  Updates a specific contact message (typically to mark as read)
+*/
+app.patch('/api/users/:user_id/contact-messages/:message_id', authenticateToken, async (req, res) => {
+  try {
+    const { user_id, message_id } = req.params;
+    const validationResult = updateContactMessageInputSchema.safeParse({ message_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'message_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
     });
 
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    updateValues.push(user_id, message_id);
+
     const client = await pool.connect();
-    try {
-      const visit_id = uuidv4();
-      const now = new Date().toISOString();
+    const result = await client.query(
+      `UPDATE contact_messages SET ${updateFields.join(', ')} WHERE user_id = $${paramIndex} AND message_id = $${paramIndex + 1} RETURNING *`,
+      updateValues
+    );
+    client.release();
 
-      const result = await client.query(
-        `INSERT INTO page_visits (visit_id, user_id, page_path, ip_address, user_agent, referrer, visited_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7) 
-         RETURNING *`,
-        [visit_id, validatedData.user_id, validatedData.page_path, validatedData.ip_address, 
-         validatedData.user_agent, validatedData.referrer, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Contact message not found', null, 'MESSAGE_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Create page visit error:', error);
+    console.error('Update contact message error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Search page visits endpoint - retrieves analytics data for portfolio owners.
-Protected endpoint with date filtering for analytics dashboards.
+  DELETE /api/users/:user_id/contact-messages/:message_id
+  Deletes a specific contact message
 */
-app.get('/api/page-visits', authenticateToken, async (req, res) => {
+app.delete('/api/users/:user_id/contact-messages/:message_id', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchPageVisitInputSchema.parse(req.query);
-    const { user_id, page_path, date_from, date_to, limit, offset, sort_by, sort_order } = validatedQuery;
+    const { user_id, message_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
+    const result = await client.query('DELETE FROM contact_messages WHERE user_id = $1 AND message_id = $2', [user_id, message_id]);
+    client.release();
 
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      if (page_path) {
-        whereClauses.push(`page_path = $${paramCounter}`);
-        queryParams.push(page_path);
-        paramCounter++;
-      }
-
-      if (date_from) {
-        whereClauses.push(`visited_at >= $${paramCounter}`);
-        queryParams.push(date_from);
-        paramCounter++;
-      }
-
-      if (date_to) {
-        whereClauses.push(`visited_at <= $${paramCounter}`);
-        queryParams.push(date_to);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM page_visits ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM page_visits ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        visits: result.rows,
-        total
-      });
-    } finally {
-      client.release();
+    if (result.rowCount === 0) {
+      return res.status(404).json(createErrorResponse('Contact message not found', null, 'MESSAGE_NOT_FOUND'));
     }
+
+    res.status(204).send();
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
+    console.error('Delete contact message error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+// APP SETTINGS ENDPOINTS
+
+/*
+  GET /api/users/:user_id/app-settings
+  Retrieves all app settings for a user
+*/
+app.get('/api/users/:user_id/app-settings', authenticateToken, async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = searchAppSettingInputSchema.safeParse({ user_id, ...req.query });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
     }
-    console.error('Search page visits error:', error);
+
+    const { theme_mode, limit, offset, sort_by, sort_order } = validationResult.data;
+    
+    let sqlQuery = 'SELECT * FROM app_settings WHERE user_id = $1';
+    const queryParams = [user_id];
+    let paramIndex = 2;
+
+    if (theme_mode) {
+      sqlQuery += ` AND theme_mode = $${paramIndex}`;
+      queryParams.push(theme_mode);
+      paramIndex++;
+    }
+
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    queryParams.push(limit, offset);
+
+    const client = await pool.connect();
+    const result = await client.query(sqlQuery, queryParams);
+    client.release();
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get app settings error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Update page visit endpoint - modifies existing page visit records.
-Administrative function for analytics data management.
+  POST /api/users/:user_id/app-settings
+  Creates new app settings for a user
 */
-app.patch('/api/page-visits/:visit_id', authenticateToken, async (req, res) => {
+app.post('/api/users/:user_id/app-settings', authenticateToken, async (req, res) => {
   try {
-    const { visit_id } = req.params;
-    const validatedData = updatePageVisitInputSchema.parse({ ...req.body, visit_id });
+    const { user_id } = req.params;
+    const validationResult = createAppSettingInputSchema.safeParse({ user_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { setting_id, theme_mode, font_scale, hidden_sections } = validationResult.data;
+    const now = new Date().toISOString();
 
     const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
+    const result = await client.query(
+      'INSERT INTO app_settings (setting_id, user_id, theme_mode, font_scale, hidden_sections, updated_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [setting_id, user_id, theme_mode, font_scale, hidden_sections, now]
+    );
+    client.release();
 
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'visit_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      values.push(visit_id);
-
-      const updateQuery = `
-        UPDATE page_visits SET ${updateFields.join(', ')} 
-        WHERE visit_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Page visit not found', null, 'PAGE_VISIT_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
-    }
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Update page visit error:', error);
+    console.error('Create app settings error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Delete page visit endpoint - removes analytics records.
-Administrative function for data management and privacy compliance.
+  GET /api/users/:user_id/app-settings/:setting_id
+  Retrieves specific app settings by ID
 */
-app.delete('/api/page-visits/:visit_id', authenticateToken, async (req, res) => {
+app.get('/api/users/:user_id/app-settings/:setting_id', authenticateToken, async (req, res) => {
   try {
-    const { visit_id } = req.params;
+    const { user_id, setting_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM page_visits WHERE visit_id = $1', [visit_id]);
+    const result = await client.query('SELECT * FROM app_settings WHERE user_id = $1 AND setting_id = $2', [user_id, setting_id]);
+    client.release();
 
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Page visit not found', null, 'PAGE_VISIT_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('App settings not found', null, 'SETTINGS_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    console.error('Delete page visit error:', error);
+    console.error('Get app settings error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Create section visit endpoint - tracks specific section interactions within pages.
-Public endpoint for detailed analytics on portfolio section engagement.
+  PATCH /api/users/:user_id/app-settings/:setting_id
+  Updates specific app settings
 */
-app.post('/api/section-visits', async (req, res) => {
+app.patch('/api/users/:user_id/app-settings/:setting_id', authenticateToken, async (req, res) => {
   try {
-    const validatedData = createSectionVisitInputSchema.parse(req.body);
+    const { user_id, setting_id } = req.params;
+    const validationResult = updateAppSettingInputSchema.safeParse({ setting_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'setting_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    // Add updated_at timestamp
+    updateFields.push(`updated_at = $${paramIndex}`);
+    updateValues.push(new Date().toISOString());
+    paramIndex++;
+
+    updateValues.push(user_id, setting_id);
 
     const client = await pool.connect();
-    try {
-      const section_visit_id = uuidv4();
-      const now = new Date().toISOString();
+    const result = await client.query(
+      `UPDATE app_settings SET ${updateFields.join(', ')} WHERE user_id = $${paramIndex} AND setting_id = $${paramIndex + 1} RETURNING *`,
+      updateValues
+    );
+    client.release();
 
-      const result = await client.query(
-        `INSERT INTO section_visits (section_visit_id, user_id, page_path, section_name, visit_count, last_visited_at) 
-         VALUES ($1, $2, $3, $4, $5, $6) 
-         RETURNING *`,
-        [section_visit_id, validatedData.user_id, validatedData.page_path, validatedData.section_name, 
-         validatedData.visit_count, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('App settings not found', null, 'SETTINGS_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Create section visit error:', error);
+    console.error('Update app settings error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Search section visits endpoint - retrieves section-level analytics data.
-Protected endpoint for detailed engagement analysis.
+  DELETE /api/users/:user_id/app-settings/:setting_id
+  Deletes specific app settings
 */
-app.get('/api/section-visits', authenticateToken, async (req, res) => {
+app.delete('/api/users/:user_id/app-settings/:setting_id', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchSectionVisitInputSchema.parse(req.query);
-    const { user_id, page_path, section_name, limit, offset, sort_by, sort_order } = validatedQuery;
+    const { user_id, setting_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
+    const result = await client.query('DELETE FROM app_settings WHERE user_id = $1 AND setting_id = $2', [user_id, setting_id]);
+    client.release();
 
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      if (page_path) {
-        whereClauses.push(`page_path = $${paramCounter}`);
-        queryParams.push(page_path);
-        paramCounter++;
-      }
-
-      if (section_name) {
-        whereClauses.push(`section_name = $${paramCounter}`);
-        queryParams.push(section_name);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM section_visits ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM section_visits ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        visits: result.rows,
-        total
-      });
-    } finally {
-      client.release();
+    if (result.rowCount === 0) {
+      return res.status(404).json(createErrorResponse('App settings not found', null, 'SETTINGS_NOT_FOUND'));
     }
+
+    res.status(204).send();
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
+    console.error('Delete app settings error:', error);
+    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
+  }
+});
+
+// NAVIGATION PREFERENCES ENDPOINTS
+
+/*
+  GET /api/users/:user_id/navigation-preferences
+  Retrieves all navigation preferences for a user
+*/
+app.get('/api/users/:user_id/navigation-preferences', authenticateToken, async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const validationResult = searchNavigationPreferenceInputSchema.safeParse({ user_id, ...req.query });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid query parameters', validationResult.error, 'VALIDATION_ERROR'));
     }
-    console.error('Search section visits error:', error);
+
+    const { limit, offset, sort_by, sort_order } = validationResult.data;
+    
+    const sqlQuery = `SELECT * FROM navigation_preferences WHERE user_id = $1 ORDER BY ${sort_by} ${sort_order} LIMIT $2 OFFSET $3`;
+
+    const client = await pool.connect();
+    const result = await client.query(sqlQuery, [user_id, limit, offset]);
+    client.release();
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get navigation preferences error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Update section visit endpoint - modifies section visit analytics.
-Allows updating visit counts and timestamps for accurate analytics.
+  POST /api/users/:user_id/navigation-preferences
+  Creates new navigation preferences for a user
 */
-app.patch('/api/section-visits/:section_visit_id', authenticateToken, async (req, res) => {
+app.post('/api/users/:user_id/navigation-preferences', authenticateToken, async (req, res) => {
   try {
-    const { section_visit_id } = req.params;
-    const validatedData = updateSectionVisitInputSchema.parse({ ...req.body, section_visit_id });
+    const { user_id } = req.params;
+    const validationResult = createNavigationPreferenceInputSchema.safeParse({ user_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const { preference_id, hidden_tabs } = validationResult.data;
+    const now = new Date().toISOString();
 
     const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
+    const result = await client.query(
+      'INSERT INTO navigation_preferences (preference_id, user_id, hidden_tabs, updated_at) VALUES ($1, $2, $3, $4) RETURNING *',
+      [preference_id, user_id, hidden_tabs, now]
+    );
+    client.release();
 
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'section_visit_id' && value !== undefined) {
-          if (key === 'visit_count') {
-            updateFields.push(`${key} = $${paramCounter}`);
-            updateFields.push(`last_visited_at = $${paramCounter + 1}`);
-            values.push(value);
-            values.push(new Date().toISOString());
-            paramCounter += 2;
-          } else {
-            updateFields.push(`${key} = $${paramCounter}`);
-            values.push(value);
-            paramCounter++;
-          }
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      values.push(section_visit_id);
-
-      const updateQuery = `
-        UPDATE section_visits SET ${updateFields.join(', ')} 
-        WHERE section_visit_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Section visit not found', null, 'SECTION_VISIT_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
-    }
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Update section visit error:', error);
+    console.error('Create navigation preferences error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Delete section visit endpoint - removes section analytics records.
-Administrative function for analytics data management.
+  GET /api/users/:user_id/navigation-preferences/:preference_id
+  Retrieves specific navigation preferences by ID
 */
-app.delete('/api/section-visits/:section_visit_id', authenticateToken, async (req, res) => {
+app.get('/api/users/:user_id/navigation-preferences/:preference_id', authenticateToken, async (req, res) => {
   try {
-    const { section_visit_id } = req.params;
+    const { user_id, preference_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM section_visits WHERE section_visit_id = $1', [section_visit_id]);
+    const result = await client.query('SELECT * FROM navigation_preferences WHERE user_id = $1 AND preference_id = $2', [user_id, preference_id]);
+    client.release();
 
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Section visit not found', null, 'SECTION_VISIT_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Navigation preferences not found', null, 'PREFERENCES_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    console.error('Delete section visit error:', error);
+    console.error('Get navigation preferences error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Create media asset endpoint - manages file uploads and media assets for portfolios.
-Comprehensive media management with metadata tracking.
+  PATCH /api/users/:user_id/navigation-preferences/:preference_id
+  Updates specific navigation preferences
 */
-app.post('/api/media-assets', authenticateToken, async (req, res) => {
+app.patch('/api/users/:user_id/navigation-preferences/:preference_id', authenticateToken, async (req, res) => {
   try {
-    const validatedData = createMediaAssetInputSchema.parse(req.body);
+    const { user_id, preference_id } = req.params;
+    const validationResult = updateNavigationPreferenceInputSchema.safeParse({ preference_id, ...req.body });
+    
+    if (!validationResult.success) {
+      return res.status(400).json(createErrorResponse('Invalid input data', validationResult.error, 'VALIDATION_ERROR'));
+    }
+
+    const updateData = validationResult.data;
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    Object.keys(updateData).forEach(key => {
+      if (key !== 'preference_id' && updateData[key] !== undefined) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(updateData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
+    }
+
+    // Add updated_at timestamp
+    updateFields.push(`updated_at = $${paramIndex}`);
+    updateValues.push(new Date().toISOString());
+    paramIndex++;
+
+    updateValues.push(user_id, preference_id);
 
     const client = await pool.connect();
-    try {
-      const asset_id = uuidv4();
-      const now = new Date().toISOString();
+    const result = await client.query(
+      `UPDATE navigation_preferences SET ${updateFields.join(', ')} WHERE user_id = $${paramIndex} AND preference_id = $${paramIndex + 1} RETURNING *`,
+      updateValues
+    );
+    client.release();
 
-      const result = await client.query(
-        `INSERT INTO media_assets (asset_id, user_id, filename, url, content_type, file_size_bytes, alt_text, uploaded_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-         RETURNING *`,
-        [asset_id, validatedData.user_id, validatedData.filename, validatedData.url, validatedData.content_type,
-         validatedData.file_size_bytes, validatedData.alt_text, now]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } finally {
-      client.release();
+    if (result.rows.length === 0) {
+      return res.status(404).json(createErrorResponse('Navigation preferences not found', null, 'PREFERENCES_NOT_FOUND'));
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Create media asset error:', error);
+    console.error('Update navigation preferences error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
 /*
-Search media assets endpoint - retrieves uploaded media files with filtering.
-Supports filtering by user, content type, and filename for media library management.
+  DELETE /api/users/:user_id/navigation-preferences/:preference_id
+  Deletes specific navigation preferences
 */
-app.get('/api/media-assets', async (req, res) => {
+app.delete('/api/users/:user_id/navigation-preferences/:preference_id', authenticateToken, async (req, res) => {
   try {
-    const validatedQuery = searchMediaAssetInputSchema.parse(req.query);
-    const { user_id, content_type, filename, limit, offset, sort_by, sort_order } = validatedQuery;
+    const { user_id, preference_id } = req.params;
 
     const client = await pool.connect();
-    try {
-      const whereClauses = [];
-      const queryParams = [];
-      let paramCounter = 1;
+    const result = await client.query('DELETE FROM navigation_preferences WHERE user_id = $1 AND preference_id = $2', [user_id, preference_id]);
+    client.release();
 
-      if (user_id) {
-        whereClauses.push(`user_id = $${paramCounter}`);
-        queryParams.push(user_id);
-        paramCounter++;
-      }
-
-      if (content_type) {
-        whereClauses.push(`content_type = $${paramCounter}`);
-        queryParams.push(content_type);
-        paramCounter++;
-      }
-
-      if (filename) {
-        whereClauses.push(`filename ILIKE $${paramCounter}`);
-        queryParams.push(`%${filename}%`);
-        paramCounter++;
-      }
-
-      const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) FROM media_assets ${whereClause}`;
-      const countResult = await client.query(countQuery, queryParams);
-      const total = parseInt(countResult.rows[0].count);
-
-      queryParams.push(limit, offset);
-      const selectQuery = `
-        SELECT * FROM media_assets ${whereClause} 
-        ORDER BY ${sort_by} ${sort_order} 
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
-      `;
-
-      const result = await client.query(selectQuery, queryParams);
-
-      res.json({
-        assets: result.rows,
-        total
-      });
-    } finally {
-      client.release();
+    if (result.rowCount === 0) {
+      return res.status(404).json(createErrorResponse('Navigation preferences not found', null, 'PREFERENCES_NOT_FOUND'));
     }
+
+    res.status(204).send();
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Search media assets error:', error);
+    console.error('Delete navigation preferences error:', error);
     res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
   }
 });
 
-/*
-Update media asset endpoint - modifies existing media asset metadata.
-Allows updating filenames, URLs, alt text, and other media properties.
-*/
-app.patch('/api/media-assets/:asset_id', authenticateToken, async (req, res) => {
-  try {
-    const { asset_id } = req.params;
-    const validatedData = updateMediaAssetInputSchema.parse({ ...req.body, asset_id });
-
-    const client = await pool.connect();
-    try {
-      // Build dynamic update query
-      const updateFields = [];
-      const values = [];
-      let paramCounter = 1;
-
-      Object.entries(validatedData).forEach(([key, value]) => {
-        if (key !== 'asset_id' && value !== undefined) {
-          updateFields.push(`${key} = $${paramCounter}`);
-          values.push(value);
-          paramCounter++;
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return res.status(400).json(createErrorResponse('No fields to update', null, 'NO_UPDATE_FIELDS'));
-      }
-
-      values.push(asset_id);
-
-      const updateQuery = `
-        UPDATE media_assets SET ${updateFields.join(', ')} 
-        WHERE asset_id = $${paramCounter + 1} 
-        RETURNING *
-      `;
-
-      const result = await client.query(updateQuery, values);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json(createErrorResponse('Media asset not found', null, 'MEDIA_ASSET_NOT_FOUND'));
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json(createErrorResponse('Validation error', error.errors, 'VALIDATION_ERROR'));
-    }
-    console.error('Update media asset error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-/*
-Delete media asset endpoint - removes media files from portfolios.
-Maintains media library integrity while allowing asset management.
-*/
-app.delete('/api/media-assets/:asset_id', authenticateToken, async (req, res) => {
-  try {
-    const { asset_id } = req.params;
-
-    const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM media_assets WHERE asset_id = $1', [asset_id]);
-
-      if (result.rowCount === 0) {
-        return res.status(404).json(createErrorResponse('Media asset not found', null, 'MEDIA_ASSET_NOT_FOUND'));
-      }
-
-      res.status(204).send();
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Delete media asset error:', error);
-    res.status(500).json(createErrorResponse('Internal server error', error, 'INTERNAL_SERVER_ERROR'));
-  }
-});
-
-// Health check endpoint
+// HEALTH CHECK ENDPOINT
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-
-// Create storage directory if it doesn't exist
-const storageDir = path.join(__dirname, 'storage');
-if (!fs.existsSync(storageDir)) {
-  fs.mkdirSync(storageDir, { recursive: true });
-}
 
 // SPA catch-all: serve index.html for non-API routes only
 app.get(/^(?!\/api).*/, (req, res) => {

@@ -1,34 +1,36 @@
-```postgresql
 -- Create tables
 CREATE TABLE users (
     user_id VARCHAR(255) PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
-    professional_title VARCHAR(255),
-    tagline VARCHAR(500),
-    bio TEXT,
-    profile_image_url VARCHAR(500),
-    phone_number VARCHAR(50),
-    location VARCHAR(255),
-    github_url VARCHAR(500),
-    linkedin_url VARCHAR(500),
-    twitter_url VARCHAR(500),
-    website_url VARCHAR(500),
-    created_at VARCHAR(50) NOT NULL,
-    updated_at VARCHAR(50) NOT NULL
+    tagline TEXT,
+    bio_text TEXT,
+    header_image_url TEXT,
+    avatar_url TEXT,
+    video_embed_url TEXT,
+    created_at VARCHAR(255) NOT NULL,
+    updated_at VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE social_media_links (
+    link_id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    platform VARCHAR(255) NOT NULL,
+    url TEXT NOT NULL,
+    display_order INTEGER DEFAULT 0 NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
 CREATE TABLE skills (
     skill_id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
-    category VARCHAR(100) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    proficiency_level INTEGER,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(255),
+    proficiency_level VARCHAR(255),
+    icon_url TEXT,
     description TEXT,
-    icon_name VARCHAR(100),
-    created_at VARCHAR(50) NOT NULL,
-    updated_at VARCHAR(50) NOT NULL,
+    display_order INTEGER DEFAULT 0 NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -36,277 +38,194 @@ CREATE TABLE projects (
     project_id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
     title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    project_type VARCHAR(100),
-    role_in_project VARCHAR(100),
-    problem_statement TEXT,
-    solution_approach TEXT,
-    technical_challenges TEXT,
-    technologies_used TEXT,
-    live_demo_url VARCHAR(500),
-    github_repo_url VARCHAR(500),
-    app_store_url VARCHAR(500),
-    play_store_url VARCHAR(500),
-    case_study_url VARCHAR(500),
-    is_featured BOOLEAN NOT NULL DEFAULT FALSE,
-    status VARCHAR(50),
-    created_at VARCHAR(50) NOT NULL,
-    updated_at VARCHAR(50) NOT NULL,
+    short_description TEXT,
+    description TEXT,
+    thumbnail_url TEXT,
+    project_url TEXT,
+    source_code_url TEXT,
+    tech_stack TEXT,
+    display_order INTEGER DEFAULT 0 NOT NULL,
+    created_at VARCHAR(255) NOT NULL,
+    updated_at VARCHAR(255) NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
-CREATE TABLE project_images (
-    image_id VARCHAR(255) PRIMARY KEY,
+CREATE TABLE project_screenshots (
+    screenshot_id VARCHAR(255) PRIMARY KEY,
     project_id VARCHAR(255) NOT NULL,
-    image_url VARCHAR(500) NOT NULL,
-    alt_text VARCHAR(255),
-    caption VARCHAR(500),
-    display_order INTEGER,
-    created_at VARCHAR(50) NOT NULL,
+    image_url TEXT NOT NULL,
+    caption TEXT,
+    display_order INTEGER DEFAULT 0 NOT NULL,
     FOREIGN KEY (project_id) REFERENCES projects(project_id)
 );
 
 CREATE TABLE experiences (
     experience_id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
+    role_title VARCHAR(255) NOT NULL,
     company_name VARCHAR(255) NOT NULL,
-    company_logo_url VARCHAR(500),
-    job_title VARCHAR(255) NOT NULL,
-    start_date VARCHAR(50) NOT NULL,
-    end_date VARCHAR(50),
-    is_current BOOLEAN NOT NULL DEFAULT FALSE,
+    company_logo_url TEXT,
+    start_date VARCHAR(255) NOT NULL,
+    end_date VARCHAR(255),
+    is_current BOOLEAN DEFAULT FALSE NOT NULL,
     location VARCHAR(255),
     description TEXT,
-    technologies_used TEXT,
-    achievements TEXT,
-    company_website_url VARCHAR(500),
-    created_at VARCHAR(50) NOT NULL,
-    updated_at VARCHAR(50) NOT NULL,
+    display_order INTEGER DEFAULT 0 NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
-CREATE TABLE educations (
+CREATE TABLE education (
     education_id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
     institution_name VARCHAR(255) NOT NULL,
-    degree VARCHAR(255) NOT NULL,
-    field_of_study VARCHAR(255),
-    start_date VARCHAR(50) NOT NULL,
-    end_date VARCHAR(50),
-    grade VARCHAR(50),
+    degree VARCHAR(255),
+    institution_logo_url TEXT,
+    start_date VARCHAR(255) NOT NULL,
+    end_date VARCHAR(255),
+    is_current BOOLEAN DEFAULT FALSE NOT NULL,
+    location VARCHAR(255),
     description TEXT,
-    institution_website_url VARCHAR(500),
-    created_at VARCHAR(50) NOT NULL,
-    updated_at VARCHAR(50) NOT NULL,
+    display_order INTEGER DEFAULT 0 NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
-CREATE TABLE certifications (
-    certification_id VARCHAR(255) PRIMARY KEY,
+CREATE TABLE key_facts (
+    fact_id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    issuing_organization VARCHAR(255) NOT NULL,
-    issue_date VARCHAR(50) NOT NULL,
-    expiration_date VARCHAR(50),
-    credential_id VARCHAR(255),
-    credential_url VARCHAR(500),
-    created_at VARCHAR(50) NOT NULL,
-    updated_at VARCHAR(50) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
-);
-
-CREATE TABLE blog_posts (
-    post_id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) UNIQUE NOT NULL,
-    excerpt TEXT,
     content TEXT NOT NULL,
-    published_at VARCHAR(50),
-    is_published BOOLEAN NOT NULL DEFAULT FALSE,
-    read_time_minutes INTEGER,
-    tags TEXT,
-    meta_title VARCHAR(255),
-    meta_description VARCHAR(500),
-    created_at VARCHAR(50) NOT NULL,
-    updated_at VARCHAR(50) NOT NULL,
+    display_order INTEGER DEFAULT 0 NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
-);
-
-CREATE TABLE contact_messages (
-    message_id VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    subject VARCHAR(255),
-    message TEXT NOT NULL,
-    ip_address VARCHAR(50),
-    user_agent TEXT,
-    created_at VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE resume_downloads (
     download_id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
-    download_url VARCHAR(500) NOT NULL,
-    file_size_bytes INTEGER,
-    created_at VARCHAR(50) NOT NULL,
+    file_format VARCHAR(50) NOT NULL,
+    download_url TEXT NOT NULL,
+    created_at VARCHAR(255) NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
-CREATE TABLE site_settings (
+CREATE TABLE contact_messages (
+    message_id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    sender_name VARCHAR(255) NOT NULL,
+    sender_email VARCHAR(255) NOT NULL,
+    sender_phone VARCHAR(50),
+    message_content TEXT NOT NULL,
+    sent_at VARCHAR(255) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending' NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE app_settings (
     setting_id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
-    privacy_policy_content TEXT,
-    terms_of_service_content TEXT,
-    cookie_policy_content TEXT,
-    seo_meta_title VARCHAR(255),
-    seo_meta_description VARCHAR(500),
-    google_analytics_id VARCHAR(100),
-    created_at VARCHAR(50) NOT NULL,
-    updated_at VARCHAR(50) NOT NULL,
+    theme_mode VARCHAR(50) DEFAULT 'light' NOT NULL,
+    font_scale NUMERIC DEFAULT 1.0 NOT NULL,
+    hidden_sections TEXT,
+    updated_at VARCHAR(255) NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
-CREATE TABLE testimonials (
-    testimonial_id VARCHAR(255) PRIMARY KEY,
+CREATE TABLE navigation_preferences (
+    preference_id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
-    client_name VARCHAR(255) NOT NULL,
-    client_position VARCHAR(255),
-    company_name VARCHAR(255),
-    content TEXT NOT NULL,
-    rating INTEGER,
-    client_photo_url VARCHAR(500),
-    project_reference VARCHAR(255),
-    created_at VARCHAR(50) NOT NULL,
-    updated_at VARCHAR(50) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (project_reference) REFERENCES projects(project_id)
-);
-
-CREATE TABLE social_media_links (
-    link_id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    platform VARCHAR(100) NOT NULL,
-    url VARCHAR(500) NOT NULL,
-    display_order INTEGER,
-    created_at VARCHAR(50) NOT NULL,
-    updated_at VARCHAR(50) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
-);
-
-CREATE TABLE page_visits (
-    visit_id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255),
-    page_path VARCHAR(500) NOT NULL,
-    ip_address VARCHAR(50),
-    user_agent TEXT,
-    referrer VARCHAR(500),
-    visited_at VARCHAR(50) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
-);
-
-CREATE TABLE section_visits (
-    section_visit_id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255),
-    page_path VARCHAR(500) NOT NULL,
-    section_name VARCHAR(100) NOT NULL,
-    visit_count INTEGER NOT NULL DEFAULT 1,
-    last_visited_at VARCHAR(50) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
-);
-
-CREATE TABLE media_assets (
-    asset_id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    filename VARCHAR(255) NOT NULL,
-    url VARCHAR(500) NOT NULL,
-    content_type VARCHAR(100) NOT NULL,
-    file_size_bytes INTEGER NOT NULL,
-    alt_text VARCHAR(255),
-    uploaded_at VARCHAR(50) NOT NULL,
+    hidden_tabs TEXT,
+    updated_at VARCHAR(255) NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
 -- Seed data
 -- Users
-INSERT INTO users (user_id, email, password_hash, name, professional_title, tagline, bio, profile_image_url, phone_number, location, github_url, linkedin_url, twitter_url, website_url, created_at, updated_at) VALUES
-('user_001', 'john.doe@example.com', 'password123', 'John Doe', 'Senior Software Engineer', 'Building scalable web applications', 'I''m a passionate software engineer with over 10 years of experience in building web applications.', 'https://picsum.photos/seed/john/200/300', '+1234567890', 'San Francisco, CA', 'https://github.com/johndoe', 'https://linkedin.com/in/johndoe', 'https://twitter.com/johndoe', 'https://johndoe.dev', '2023-01-15T09:30:00Z', '2023-06-20T14:45:00Z'),
-('user_002', 'jane.smith@example.com', 'admin123', 'Jane Smith', 'Product Designer', 'Creating beautiful and functional user experiences', 'I specialize in UI/UX design with a focus on creating intuitive user experiences.', 'https://picsum.photos/seed/jane/200/300', '+0987654321', 'New York, NY', 'https://github.com/janesmith', 'https://linkedin.com/in/janesmith', 'https://twitter.com/janesmith', 'https://janesmith.design', '2023-02-10T11:20:00Z', '2023-07-15T16:30:00Z');
-
--- Skills
-INSERT INTO skills (skill_id, user_id, category, name, proficiency_level, description, icon_name, created_at, updated_at) VALUES
-('skill_001', 'user_001', 'Frontend', 'React', 90, 'Building user interfaces with React', 'react-icon', '2023-01-20T10:00:00Z', '2023-01-20T10:00:00Z'),
-('skill_002', 'user_001', 'Backend', 'Node.js', 85, 'Server-side development with Node.js', 'node-icon', '2023-01-20T10:05:00Z', '2023-01-20T10:05:00Z'),
-('skill_003', 'user_001', 'Database', 'PostgreSQL', 80, 'Relational database management', 'postgres-icon', '2023-01-20T10:10:00Z', '2023-01-20T10:10:00Z'),
-('skill_004', 'user_002', 'Design', 'Figma', 95, 'UI/UX design and prototyping', 'figma-icon', '2023-02-15T09:00:00Z', '2023-02-15T09:00:00Z'),
-('skill_005', 'user_002', 'Design', 'Adobe XD', 75, 'Experience design tool', 'xd-icon', '2023-02-15T09:05:00Z', '2023-02-15T09:05:00Z');
-
--- Projects
-INSERT INTO projects (project_id, user_id, title, description, project_type, role_in_project, problem_statement, solution_approach, technical_challenges, technologies_used, live_demo_url, github_repo_url, app_store_url, play_store_url, case_study_url, is_featured, status, created_at, updated_at) VALUES
-('proj_001', 'user_001', 'E-commerce Platform', 'A full-featured e-commerce solution with payment processing and inventory management.', 'Web Application', 'Lead Developer', 'Businesses needed an all-in-one solution for online sales', 'Built a scalable platform using microservices architecture', 'Handling high-concurrency during peak sales periods', 'React, Node.js, PostgreSQL, Redis', 'https://ecommerce.example.com', 'https://github.com/johndoe/ecommerce-platform', NULL, NULL, NULL, TRUE, 'Completed', '2023-03-01T12:00:00Z', '2023-05-15T18:30:00Z'),
-('proj_002', 'user_001', 'Task Management App', 'A productivity application for teams to manage tasks and collaborate effectively.', 'Mobile App', 'Full Stack Developer', 'Teams struggled with task tracking across different tools', 'Created unified platform with real-time updates', 'Ensuring data sync across multiple devices', 'React Native, GraphQL, MongoDB', NULL, 'https://github.com/johndoe/task-manager', 'https://apps.apple.com/app/id123456789', 'https://play.google.com/store/apps/details?id=com.taskmanager', NULL, FALSE, 'In Progress', '2023-04-10T14:00:00Z', '2023-06-25T20:15:00Z'),
-('proj_003', 'user_002', 'Banking Dashboard UI', 'Modern dashboard interface for financial analytics and transaction monitoring.', 'UI Design', 'Lead Designer', 'Traditional banking interfaces were outdated and difficult to use', 'Redesigned with modern UX principles and data visualization', 'Balancing complex information with clean aesthetics', 'Figma, Adobe Illustrator', NULL, NULL, NULL, NULL, 'https://behance.net/gallery/12345/banking-dashboard', TRUE, 'Completed', '2023-03-15T11:00:00Z', '2023-04-20T16:45:00Z');
-
--- Project Images
-INSERT INTO project_images (image_id, project_id, image_url, alt_text, caption, display_order, created_at) VALUES
-('img_001', 'proj_001', 'https://picsum.photos/seed/ecommerce1/800/600', 'E-commerce homepage', 'Homepage showing featured products', 1, '2023-03-05T09:00:00Z'),
-('img_002', 'proj_001', 'https://picsum.photos/seed/ecommerce2/800/600', 'Product detail page', 'Detailed view of product with reviews', 2, '2023-03-05T09:05:00Z'),
-('img_003', 'proj_002', 'https://picsum.photos/seed/tasks1/800/600', 'Task list screen', 'Dashboard with tasks organized by priority', 1, '2023-04-15T10:00:00Z'),
-('img_004', 'proj_003', 'https://picsum.photos/seed/dashboard1/800/600', 'Banking dashboard', 'Overview of financial metrics', 1, '2023-03-20T11:00:00Z'),
-('img_005', 'proj_003', 'https://picsum.photos/seed/dashboard2/800/600', 'Transaction history', 'Detailed transaction history view', 2, '2023-03-20T11:05:00Z');
-
--- Experiences
-INSERT INTO experiences (experience_id, user_id, company_name, company_logo_url, job_title, start_date, end_date, is_current, location, description, technologies_used, achievements, company_website_url, created_at, updated_at) VALUES
-('exp_001', 'user_001', 'TechCorp Inc.', 'https://picsum.photos/seed/techcorp/100/100', 'Senior Software Engineer', '2020-01-15', '2023-06-30', FALSE, 'San Francisco, CA', 'Led development of multiple customer-facing applications and mentored junior developers.', 'React, Node.js, AWS, Docker', 'Reduced application load time by 40% through optimization techniques', 'https://techcorp.com', '2020-01-20T09:00:00Z', '2023-07-01T17:00:00Z'),
-('exp_002', 'user_001', 'StartupXYZ', 'https://picsum.photos/seed/startupxyz/100/100', 'Software Engineer', '2018-03-10', '2019-12-31', FALSE, 'Remote', 'Worked on various features for the core product including authentication system and payment integration.', 'JavaScript, PHP, MySQL', 'Integrated third-party payment gateway reducing checkout abandonment by 25%', 'https://startupxyz.com', '2018-03-15T10:00:00Z', '2020-01-05T09:00:00Z'),
-('exp_003', 'user_002', 'DesignStudio Ltd.', 'https://picsum.photos/seed/designstudio/100/100', 'Lead Product Designer', '2021-06-01', NULL, TRUE, 'New York, NY', 'Responsible for overall design direction and leading a team of UI/UX designers.', 'Figma, Sketch, Adobe Creative Suite', 'Redesigned company flagship product improving user satisfaction score by 35%', 'https://designstudio.com', '2021-06-05T11:00:00Z', '2023-07-20T14:00:00Z');
-
--- Educations
-INSERT INTO educations (education_id, user_id, institution_name, degree, field_of_study, start_date, end_date, grade, description, institution_website_url, created_at, updated_at) VALUES
-('edu_001', 'user_001', 'University of Technology', 'Master of Science', 'Computer Science', '2016-09-01', '2018-05-30', '3.8 GPA', 'Focused on distributed systems and machine learning algorithms', 'https://university-tech.edu', '2016-09-05T08:00:00Z', '2018-06-01T12:00:00Z'),
-('edu_002', 'user_001', 'State College', 'Bachelor of Science', 'Software Engineering', '2012-09-01', '2016-05-30', '3.7 GPA', 'Graduated with honors, specialized in web development', 'https://statecollege.edu', '2012-09-05T08:00:00Z', '2016-06-01T12:00:00Z'),
-('edu_003', 'user_002', 'Design Academy', 'Bachelor of Arts', 'Graphic Design', '2015-09-01', '2019-05-30', '3.9 GPA', 'Specialized in digital product design and user experience', 'https://designacademy.edu', '2015-09-05T08:00:00Z', '2019-06-01T12:00:00Z');
-
--- Certifications
-INSERT INTO certifications (certification_id, user_id, name, issuing_organization, issue_date, expiration_date, credential_id, credential_url, created_at, updated_at) VALUES
-('cert_001', 'user_001', 'AWS Certified Solutions Architect', 'Amazon Web Services', '2022-03-15', '2025-03-15', 'AWS123456', 'https://aws-certifications.com/aws123456', '2022-03-20T10:00:00Z', '2022-03-20T10:00:00Z'),
-('cert_002', 'user_001', 'Google Cloud Professional Developer', 'Google Cloud', '2021-11-10', '2023-11-10', 'GCP789012', 'https://google-cloud-certifications.com/gcp789012', '2021-11-15T11:00:00Z', '2021-11-15T11:00:00Z'),
-('cert_003', 'user_002', 'UX Design Certification', 'Interaction Design Foundation', '2020-07-22', NULL, 'IDF345678', 'https://interaction-design.org/certificates/user123', '2020-07-25T09:00:00Z', '2020-07-25T09:00:00Z');
-
--- Blog Posts
-INSERT INTO blog_posts (post_id, user_id, title, slug, excerpt, content, published_at, is_published, read_time_minutes, tags, meta_title, meta_description, created_at, updated_at) VALUES
-('post_001', 'user_001', 'Understanding React Hooks', 'understanding-react-hooks', 'A deep dive into React Hooks and how they simplify state management', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua...', '2023-05-10T08:00:00Z', TRUE, 8, 'React,JavaScript,Frontend', 'Understanding React Hooks - John Doe Blog', 'Learn about React Hooks and how to use them effectively in your projects', '2023-05-05T14:00:00Z', '2023-05-10T09:00:00Z'),
-('post_002', 'user_001', 'Building Scalable Node.js Applications', 'building-scalable-nodejs-applications', 'Best practices for creating high-performance Node.js applications', 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat...', '2023-06-15T10:00:00Z', TRUE, 12, 'Node.js,Backend,Performance', 'Building Scalable Node.js Apps - John Doe Blog', 'Discover techniques for building high-performance Node.js applications', '2023-06-10T16:00:00Z', '2023-06-15T11:00:00Z'),
-('post_003', 'user_002', 'Design Systems Best Practices', 'design-systems-best-practices', 'How to create and maintain effective design systems', 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur...', NULL, FALSE, 10, 'Design,Systems,UI', NULL, NULL, '2023-07-01T11:00:00Z', '2023-07-01T11:00:00Z');
-
--- Contact Messages
-INSERT INTO contact_messages (message_id, name, email, subject, message, ip_address, user_agent, created_at) VALUES
-('msg_001', 'Alice Johnson', 'alice@example.com', 'Project Inquiry', 'Hello, I''d like to discuss a potential project collaboration.', '192.168.1.100', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', '2023-06-01T15:30:00Z'),
-('msg_002', 'Bob Williams', 'bob@example.com', 'Speaking Engagement', 'Would you be interested in speaking at our upcoming tech conference?', '10.0.0.50', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36', '2023-06-15T11:20:00Z');
-
--- Resume Downloads
-INSERT INTO resume_downloads (download_id, user_id, download_url, file_size_bytes, created_at) VALUES
-('dl_001', 'user_001', 'https://portfolio.example.com/resumes/john_doe_resume.pdf', 102400, '2023-05-20T09:15:00Z'),
-('dl_002', 'user_002', 'https://portfolio.example.com/resumes/jane_smith_resume.pdf', 98700, '2023-06-25T14:30:00Z');
-
--- Site Settings
-INSERT INTO site_settings (setting_id, user_id, privacy_policy_content, terms_of_service_content, cookie_policy_content, seo_meta_title, seo_meta_description, google_analytics_id, created_at, updated_at) VALUES
-('set_001', 'user_001', 'Privacy policy content goes here...', 'Terms of service content goes here...', 'Cookie policy content goes here...', 'John Doe - Portfolio', 'Professional portfolio of John Doe, Senior Software Engineer', 'UA-12345678-1', '2023-01-15T10:00:00Z', '2023-06-20T15:00:00Z'),
-('set_002', 'user_002', 'Privacy policy content goes here...', 'Terms of service content goes here...', 'Cookie policy content goes here...', 'Jane Smith - Designer Portfolio', 'Portfolio of Jane Smith, Product Designer specializing in UI/UX', 'UA-87654321-1', '2023-02-10T12:00:00Z', '2023-07-15T17:00:00Z');
-
--- Testimonials
-INSERT INTO testimonials (testimonial_id, user_id, client_name, client_position, company_name, content, rating, client_photo_url, project_reference, created_at, updated_at) VALUES
-('test_001', 'user_001', 'Sarah Thompson', 'CTO', 'TechStart Inc.', 'John delivered exceptional work on our e-commerce platform. His technical expertise and problem-solving abilities were crucial to our project success.', 5, 'https://picsum.photos/seed/sarah/100/100', 'proj_001', '2023-06-01T13:00:00Z', '2023-06-01T13:00:00Z'),
-('test_002', 'user_002', 'Michael Chen', 'Product Manager', 'FinTech Corp', 'Jane transformed our user experience completely. Her attention to detail and innovative approach resulted in a 40% increase in user engagement.', 5, 'https://picsum.photos/seed/michael/100/100', 'proj_003', '2023-05-15T14:30:00Z', '2023-05-15T14:30:00Z');
+INSERT INTO users (user_id, email, password_hash, name, tagline, bio_text, header_image_url, avatar_url, video_embed_url, created_at, updated_at) VALUES
+('user_001', 'john.doe@example.com', 'password123', 'John Doe', 'Senior Full Stack Developer', 'I build scalable web applications with modern technologies.', 'https://picsum.photos/seed/johnheader/1200/400', 'https://picsum.photos/seed/johnavatar/200/200', 'https://www.youtube.com/embed/dQw4w9WgXcQ', '2023-01-15T09:30:00Z', '2023-06-20T14:45:00Z'),
+('user_002', 'jane.smith@example.com', 'password123', 'Jane Smith', 'UI/UX Designer & Frontend Developer', 'Passionate about creating beautiful and functional user experiences.', 'https://picsum.photos/seed/janeheader/1200/400', 'https://picsum.photos/seed/janeavatar/200/200', NULL, '2023-02-20T11:15:00Z', '2023-06-18T16:20:00Z'),
+('user_003', 'mike.johnson@example.com', 'password123', 'Mike Johnson', 'DevOps Engineer', 'Specializing in cloud infrastructure and CI/CD pipelines.', 'https://picsum.photos/seed/mikeheader/1200/400', 'https://picsum.photos/seed/mikeavatar/200/200', NULL, '2023-03-10T13:45:00Z', '2023-06-19T10:30:00Z');
 
 -- Social Media Links
-INSERT INTO social_media_links (link_id, user_id, platform, url, display_order, created_at, updated_at) VALUES
-('sm_001', 'user_001', 'GitHub', 'https://github.com/johndoe', 1, '2023-01-15T10:00:00Z', '2023-01-15T10:00:00Z'),
-('sm_002', 'user_001', 'LinkedIn', 'https://linkedin.com/in/johndoe', 2, '2023-01-15T10:00:00Z', '2023-01-15T10:00:00Z'),
-('sm_003', 'user_001', 'Twitter', 'https://twitter.com/johndoe', 3, '2023-01-15T10:00:00Z', '2023-01-15T10:00:00Z'),
-('sm_004', 'user_002', 'Behance', 'https://behance.net/janesmith', 1, '2023-02-10T12:00:00Z', '2023-02-10T12:00:00Z'),
-('sm_005', 'user_002', 'Dribbble', 'https://dribbble.com/janesmith', 2, '2023-02-10T12:00:00Z', '2023-02-10T12:00:00Z');
+INSERT INTO social_media_links (link_id, user_id, platform, url, display_order) VALUES
+('link_001', 'user_001', 'github', 'https://github.com/johndoe', 1),
+('link_002', 'user_001', 'linkedin', 'https://linkedin.com/in/johndoe', 2),
+('link_003', 'user_001', 'twitter', 'https://twitter.com/johndoe', 3),
+('link_004', 'user_002', 'dribbble', 'https://dribbble.com/janesmith', 1),
+('link_005', 'user_002', 'behance', 'https://behance.net/janesmith', 2),
+('link_006', 'user_003', 'github', 'https://github.com/mikejohnson', 1),
+('link_007', 'user_003', 'linkedin', 'https://linkedin.com/in/mikejohnson', 2);
 
--- Page Visits
-INSERT INTO page_visits (visit_id, user_id, page_path, ip_address, user_agent, referrer, visited_at) VALUES
-('visit_001', NULL, '/', '192.168.1.10', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+-- Skills
+INSERT INTO skills (skill_id, user_id, name, category, proficiency_level, icon_url, description, display_order) VALUES
+('skill_001', 'user_001', 'JavaScript', 'Frontend', 'Expert', 'https://picsum.photos/seed/jsicon/50/50', 'Proficient in modern JavaScript and ES6+ features', 1),
+('skill_002', 'user_001', 'React', 'Frontend', 'Expert', 'https://picsum.photos/seed/reacticon/50/50', 'Building complex UIs with React and Redux', 2),
+('skill_003', 'user_001', 'Node.js', 'Backend', 'Advanced', 'https://picsum.photos/seed/nodeicon/50/50', 'Creating RESTful APIs with Express.js', 3),
+('skill_004', 'user_001', 'PostgreSQL', 'Database', 'Advanced', 'https://picsum.photos/seed/postgresicon/50/50', 'Database design and optimization', 4),
+('skill_005', 'user_002', 'Figma', 'Design', 'Expert', 'https://picsum.photos/seed/figmaicon/50/50', 'UI/UX design and prototyping', 1),
+('skill_006', 'user_002', 'CSS', 'Frontend', 'Expert', 'https://picsum.photos/seed/cssicon/50/50', 'Advanced CSS and responsive design', 2),
+('skill_007', 'user_002', 'HTML', 'Frontend', 'Expert', 'https://picsum.photos/seed/htmlicon/50/50', 'Semantic HTML and accessibility', 3),
+('skill_008', 'user_003', 'Docker', 'DevOps', 'Expert', 'https://picsum.photos/seed/dockericon/50/50', 'Containerization and orchestration', 1),
+('skill_009', 'user_003', 'AWS', 'DevOps', 'Advanced', 'https://picsum.photos/seed/awsicon/50/50', 'Cloud infrastructure and services', 2),
+('skill_010', 'user_003', 'Kubernetes', 'DevOps', 'Intermediate', 'https://picsum.photos/seed/k8sicon/50/50', 'Container orchestration', 3);
+
+-- Projects
+INSERT INTO projects (project_id, user_id, title, short_description, description, thumbnail_url, project_url, source_code_url, tech_stack, display_order, created_at, updated_at) VALUES
+('proj_001', 'user_001', 'E-commerce Platform', 'Full-featured online shopping experience', 'A complete e-commerce solution with product catalog, shopping cart, and payment processing.', 'https://picsum.photos/seed/ecommerce/600/400', 'https://ecommerce.example.com', 'https://github.com/johndoe/ecommerce-platform', 'React, Node.js, PostgreSQL, Stripe', 1, '2023-04-01T10:00:00Z', '2023-05-15T14:30:00Z'),
+('proj_002', 'user_001', 'Task Management App', 'Collaborative task and project management', 'A real-time collaborative application for teams to manage tasks and projects efficiently.', 'https://picsum.photos/seed/taskmanager/600/400', 'https://taskmanager.example.com', 'https://github.com/johndoe/task-manager', 'React, Socket.io, MongoDB, Express.js', 2, '2023-02-15T09:00:00Z', '2023-03-20T16:45:00Z'),
+('proj_003', 'user_002', 'Health & Wellness Dashboard', 'Health tracking and analytics dashboard', 'A comprehensive dashboard for tracking health metrics and providing personalized insights.', 'https://picsum.photos/seed/healthdashboard/600/400', 'https://healthdash.example.com', 'https://github.com/janesmith/health-dashboard', 'Figma, React, D3.js, CSS', 1, '2023-03-10T11:30:00Z', '2023-04-25T13:20:00Z');
+
+-- Project Screenshots
+INSERT INTO project_screenshots (screenshot_id, project_id, image_url, caption, display_order) VALUES
+('shot_001', 'proj_001', 'https://picsum.photos/seed/ecommerce1/800/600', 'Product catalog view', 1),
+('shot_002', 'proj_001', 'https://picsum.photos/seed/ecommerce2/800/600', 'Shopping cart interface', 2),
+('shot_003', 'proj_001', 'https://picsum.photos/seed/ecommerce3/800/600', 'Checkout process', 3),
+('shot_004', 'proj_002', 'https://picsum.photos/seed/taskmanager1/800/600', 'Task board view', 1),
+('shot_005', 'proj_002', 'https://picsum.photos/seed/taskmanager2/800/600', 'Team collaboration features', 2),
+('shot_006', 'proj_003', 'https://picsum.photos/seed/healthdashboard1/800/600', 'Health metrics overview', 1),
+('shot_007', 'proj_003', 'https://picsum.photos/seed/healthdashboard2/800/600', 'Personalized insights', 2);
+
+-- Experiences
+INSERT INTO experiences (experience_id, user_id, role_title, company_name, company_logo_url, start_date, end_date, is_current, location, description, display_order) VALUES
+('exp_001', 'user_001', 'Senior Full Stack Developer', 'Tech Solutions Inc.', 'https://picsum.photos/seed/techsolutions/100/100', '2020-06-01', NULL, true, 'San Francisco, CA', 'Leading development of cloud-based applications using modern web technologies.', 1),
+('exp_002', 'user_001', 'Frontend Developer', 'WebCraft LLC', 'https://picsum.photos/seed/webcraft/100/100', '2018-03-01', '2020-05-31', false, 'New York, NY', 'Developed responsive web applications using React and modern CSS frameworks.', 2),
+('exp_003', 'user_002', 'UI/UX Designer', 'Creative Designs Co.', 'https://picsum.photos/seed/creativedesigns/100/100', '2019-01-15', NULL, true, 'Austin, TX', 'Creating user-centered designs for web and mobile applications.', 1),
+('exp_004', 'user_003', 'DevOps Engineer', 'Cloud Systems Ltd.', 'https://picsum.photos/seed/cloudsystems/100/100', '2021-04-01', NULL, true, 'Seattle, WA', 'Managing cloud infrastructure and CI/CD pipelines for enterprise clients.', 1);
+
+-- Education
+INSERT INTO education (education_id, user_id, institution_name, degree, institution_logo_url, start_date, end_date, is_current, location, description, display_order) VALUES
+('edu_001', 'user_001', 'Stanford University', 'M.S. Computer Science', 'https://picsum.photos/seed/stanford/100/100', '2016-09-01', '2018-06-15', false, 'Stanford, CA', 'Specialized in Artificial Intelligence and Machine Learning.', 1),
+('edu_002', 'user_001', 'University of California', 'B.S. Software Engineering', 'https://picsum.photos/seed/uc/100/100', '2012-09-01', '2016-06-15', false, 'Berkeley, CA', 'Graduated with honors. Focus on web development and databases.', 2),
+('edu_003', 'user_002', 'Rhode Island School of Design', 'B.F.A. Graphic Design', 'https://picsum.photos/seed/risd/100/100', '2014-09-01', '2018-05-20', false, 'Providence, RI', 'Specialized in User Interface and Interaction Design.', 1),
+('edu_004', 'user_003', 'Massachusetts Institute of Technology', 'B.S. Computer Science', 'https://picsum.photos/seed/mit/100/100', '2013-09-01', '2017-06-10', false, 'Cambridge, MA', 'Focus on Distributed Systems and Network Security.', 1);
+
+-- Key Facts
+INSERT INTO key_facts (fact_id, user_id, content, display_order) VALUES
+('fact_001', 'user_001', '10+ years of experience in web development', 1),
+('fact_002', 'user_001', 'Led development of 20+ successful projects', 2),
+('fact_003', 'user_001', 'Expert in modern JavaScript frameworks', 3),
+('fact_004', 'user_002', 'Award-winning UI designer with 7+ years experience', 1),
+('fact_005', 'user_002', 'Specialized in user research and usability testing', 2),
+('fact_006', 'user_003', 'AWS Certified Solutions Architect', 1),
+('fact_007', 'user_003', 'Expertise in containerization technologies', 2);
+
+-- Resume Downloads
+INSERT INTO resume_downloads (download_id, user_id, file_format, download_url, created_at) VALUES
+('res_001', 'user_001', 'PDF', 'https://example.com/resumes/john_doe.pdf', '2023-06-01T10:30:00Z'),
+('res_002', 'user_001', 'DOCX', 'https://example.com/resumes/john_doe.docx', '2023-06-01T10:30:00Z'),
+('res_003', 'user_002', 'PDF', 'https://example.com/resumes/jane_smith.pdf', '2023-05-28T14:15:00Z');
+
+-- Contact Messages
+INSERT INTO contact_messages (message_id, user_id, sender_name, sender_email, sender_phone, message_content, sent_at, status) VALUES
+('msg_001', 'user_001', 'Alice Johnson', 'alice@example.com', '+1234567890', 'I''d like to discuss a potential project collaboration. Are you available for a call next week?', '2023-06-10T09:15:00Z', 'pending'),
+('msg_002', 'user_001', 'Bob Williams', 'bob@example.com', NULL, 'Impressive portfolio! I have a job opportunity that might interest you.', '2023-06-12T16:45:00Z', 'read'),
+('msg_003', 'user_002', 'Carol Davis', 'carol@example.com', '+1987654321', 'Could you provide more details about your UX design process?', '2023-06-05T11:30:00Z', 'pending');
+
+-- App Settings
+INSERT INTO app_settings (setting_id, user_id, theme_mode, font_scale, hidden_sections, updated_at) VALUES
+('sett_001', 'user_001', 'dark', 1.1, '["education"]', '2023-06-20T14:45:00Z'),
+('sett_002', 'user_002', 'light', 1.0, NULL, '2023-06-18T16:20:00Z'),
+('sett_003', 'user_003', 'dark', 1.2, '["key_facts"]', '2023-06-19T10:30:00Z');
+
+-- Navigation Preferences
+INSERT INTO navigation_preferences (preference_id, user_id, hidden_tabs, updated_at) VALUES
+('nav_001', 'user_001', '["resume"]', '2023-06-20T14:45:00Z'),
+('nav_002', 'user_002', NULL, '2023-06-18T16:20:00Z'),
+('nav_003', 'user_003', '["contact"]', '2023-06-19T10:30:00Z');

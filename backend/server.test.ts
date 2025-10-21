@@ -1,6 +1,6 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
-import { app, pool } from './server'; // Adjust path as needed
+import { app, pool } from './server.js'; // Adjust path as needed
 
 // Mock data
 const mockUser = {

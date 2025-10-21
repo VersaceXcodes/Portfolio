@@ -73,7 +73,7 @@ const pool = new Pool(
   DATABASE_URL
     ? { 
         connectionString: DATABASE_URL, 
-        ssl: { require: true } 
+        ssl: { rejectUnauthorized: false } 
       }
     : {
         host: PGHOST,
@@ -81,7 +81,7 @@ const pool = new Pool(
         user: PGUSER,
         password: PGPASSWORD,
         port: Number(PGPORT),
-        ssl: { require: true },
+        ssl: { rejectUnauthorized: false },
       }
 );
 
@@ -118,7 +118,7 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as { user_id: string };
     const client = await pool.connect();
     const result = await client.query('SELECT user_id, email, name, created_at FROM users WHERE user_id = $1', [decoded.user_id]);
     client.release();
@@ -433,8 +433,8 @@ app.get('/api/users/:user_id/social-media-links', authenticateToken, async (req,
       paramIndex++;
     }
 
-    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    queryParams.push(limit, offset);
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT ${paramIndex} OFFSET ${paramIndex + 1}`;
+    queryParams.push(String(limit), String(offset));
 
     const client = await pool.connect();
     const result = await client.query(sqlQuery, queryParams);
@@ -607,8 +607,8 @@ app.get('/api/users/:user_id/skills', authenticateToken, async (req, res) => {
       paramIndex++;
     }
 
-    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    queryParams.push(limit, offset);
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT ${paramIndex} OFFSET ${paramIndex + 1}`;
+    queryParams.push(String(limit), String(offset));
 
     const client = await pool.connect();
     const result = await client.query(sqlQuery, queryParams);
@@ -775,8 +775,8 @@ app.get('/api/users/:user_id/projects', authenticateToken, async (req, res) => {
       paramIndex++;
     }
 
-    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    queryParams.push(limit, offset);
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT ${paramIndex} OFFSET ${paramIndex + 1}`;
+    queryParams.push(String(limit), String(offset));
 
     const client = await pool.connect();
     const result = await client.query(sqlQuery, queryParams);
@@ -1112,13 +1112,13 @@ app.get('/api/users/:user_id/experiences', authenticateToken, async (req, res) =
     }
 
     if (is_current !== undefined) {
-      sqlQuery += ` AND is_current = $${paramIndex}`;
-      queryParams.push(is_current);
+      sqlQuery += ` AND is_current = ${paramIndex}`;
+      queryParams.push(String(is_current));
       paramIndex++;
     }
 
-    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    queryParams.push(limit, offset);
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT ${paramIndex} OFFSET ${paramIndex + 1}`;
+    queryParams.push(String(limit), String(offset));
 
     const client = await pool.connect();
     const result = await client.query(sqlQuery, queryParams);
@@ -1292,13 +1292,13 @@ app.get('/api/users/:user_id/education', authenticateToken, async (req, res) => 
     }
 
     if (is_current !== undefined) {
-      sqlQuery += ` AND is_current = $${paramIndex}`;
-      queryParams.push(is_current);
+      sqlQuery += ` AND is_current = ${paramIndex}`;
+      queryParams.push(String(is_current));
       paramIndex++;
     }
 
-    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    queryParams.push(limit, offset);
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT ${paramIndex} OFFSET ${paramIndex + 1}`;
+    queryParams.push(String(limit), String(offset));
 
     const client = await pool.connect();
     const result = await client.query(sqlQuery, queryParams);
@@ -1636,8 +1636,8 @@ app.get('/api/users/:user_id/resume-downloads', authenticateToken, async (req, r
       paramIndex++;
     }
 
-    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    queryParams.push(limit, offset);
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT ${paramIndex} OFFSET ${paramIndex + 1}`;
+    queryParams.push(String(limit), String(offset));
 
     const client = await pool.connect();
     const result = await client.query(sqlQuery, queryParams);
@@ -1814,8 +1814,8 @@ app.get('/api/users/:user_id/contact-messages', authenticateToken, async (req, r
       paramIndex++;
     }
 
-    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    queryParams.push(limit, offset);
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT ${paramIndex} OFFSET ${paramIndex + 1}`;
+    queryParams.push(String(limit), String(offset));
 
     const client = await pool.connect();
     const result = await client.query(sqlQuery, queryParams);
@@ -1983,8 +1983,8 @@ app.get('/api/users/:user_id/app-settings', authenticateToken, async (req, res) 
       paramIndex++;
     }
 
-    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    queryParams.push(limit, offset);
+    sqlQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT ${paramIndex} OFFSET ${paramIndex + 1}`;
+    queryParams.push(String(limit), String(offset));
 
     const client = await pool.connect();
     const result = await client.query(sqlQuery, queryParams);
@@ -2306,6 +2306,6 @@ app.get(/^(?!\/api).*/, (req, res) => {
 export { app, pool };
 
 // Start the server
-app.listen(port, '0.0.0.0', () => {
+app.listen(Number(port), '0.0.0.0', () => {
   console.log(`Server running on port ${port} and listening on 0.0.0.0`);
 });

@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useAppStore } from '@/store/main';
-import { User } from '@/DB/zodschemas';
+import { User } from '@/db/zodSchemas';
 
 const UV_AboutMe: React.FC = () => {
   // Global state access

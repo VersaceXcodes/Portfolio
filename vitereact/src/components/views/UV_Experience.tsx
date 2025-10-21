@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useAppStore } from '@/store/main';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Experience } from '@/DB/zodschemas';
+import { Experience } from '@/db/zodSchemas';
 
 const UV_Experience: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();

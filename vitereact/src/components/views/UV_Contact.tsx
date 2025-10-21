@@ -101,13 +101,7 @@ const UV_Contact: React.FC = () => {
     }
   };
   
-  // Clear all messages
-  const clearMessages = () => {
-    setContactFormStatus({
-      success_message: null,
-      error_message: null
-    });
-  };
+
 
   return (
     <>

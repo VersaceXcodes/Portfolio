@@ -3,13 +3,10 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useAppStore } from '@/store/main';
-import { User, SocialMediaLink } from '@/db/zodschemas';
+import { User, SocialMediaLink } from '@/db/zodSchemas';
 
 // Define types based on Zod schemas
-interface UserData extends User {
-  // Additional fields that might be in the response but not in the base schema
-  social_media_links?: SocialMediaLink[];
-}
+type UserData = User;
 
 // Social media platform icons mapping
 const SocialIcon: React.FC<{ platform: string; url: string }> = ({ platform, url }) => {

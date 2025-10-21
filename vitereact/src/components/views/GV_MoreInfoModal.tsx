@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppStore } from '@/store/main';
 import axios from 'axios';
-import { User, KeyFact } from '@/DB/zodschemas';
+import { User, KeyFact } from '@/db/zodSchemas';
 
 const GV_MoreInfoModal: React.FC = () => {
   // Modal state
@@ -71,7 +71,7 @@ const GV_MoreInfoModal: React.FC = () => {
     if (!currentUser?.user_id || !authToken) return;
     
     try {
-      const response = await axios.post(
+      await axios.post(
         `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/users/${currentUser.user_id}/resume-downloads`,
         {
           download_id: `download_${Date.now()}`,

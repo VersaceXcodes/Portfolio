@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAppStore } from '@/store/main';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+
 import { BlogPost } from '@/store/main';
 
 const UV_BlogFeed: React.FC = () => {
@@ -28,14 +28,14 @@ const UV_BlogFeed: React.FC = () => {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['blogPosts', currentPage, currentUser?.user_id],
     queryFn: () => fetchBlogPosts(currentPage),
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
     staleTime: 60000,
     refetchOnWindowFocus: false,
     retry: 1
   });
 
-  const blogPosts: BlogPost[] = data?.posts || [];
-  const totalPosts = data?.total || 0;
+  const blogPosts: BlogPost[] = (data && 'posts' in data ? data.posts : []) || [];
+  const totalPosts = (data && 'total' in data ? data.total : 0) || 0;
   const totalPages = Math.ceil(totalPosts / itemsPerPage);
 
   const handlePageChange = (page: number) => {

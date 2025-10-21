@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '@/store/main';
-import { User, Project, KeyFact } from '@/types/zodSchemas';
+import { User, Project, KeyFact } from '@/db/zodSchemas';
 
 // Define TypeScript interfaces
 interface SocialMediaLink {

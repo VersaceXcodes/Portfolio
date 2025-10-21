@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { useAppStore } from '@/store/main';
-import { Project } from '@/db/zodschemas';
+import { Project } from '@/db/zodSchemas';
 
 const UV_Projects: React.FC = () => {
   // Global state

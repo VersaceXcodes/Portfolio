@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import axios from 'axios';
 
 // Type definitions
-interface User {
+export interface User {
   user_id: string;
   email: string;
   name: string;
@@ -12,6 +12,90 @@ interface User {
   header_image_url: string | null;
   avatar_url: string | null;
   video_embed_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Experience {
+  experience_id: string;
+  user_id: string;
+  role_title: string;
+  company_name: string;
+  company_logo_url: string | null;
+  start_date: string;
+  end_date: string | null;
+  is_current: boolean;
+  location: string | null;
+  description: string | null;
+  display_order: number;
+}
+
+export interface Education {
+  education_id: string;
+  user_id: string;
+  institution_name: string;
+  degree: string | null;
+  institution_logo_url: string | null;
+  start_date: string;
+  end_date: string | null;
+  is_current: boolean;
+  location: string | null;
+  description: string | null;
+  display_order: number;
+}
+
+export interface Certification {
+  certification_id: string;
+  user_id: string;
+  name: string;
+  issuing_organization: string;
+  issue_date: string;
+  expiry_date: string | null;
+  credential_id: string | null;
+  credential_url: string | null;
+}
+
+export interface Testimonial {
+  testimonial_id: string;
+  user_id: string;
+  author_name: string;
+  author_title: string | null;
+  author_company: string | null;
+  content: string;
+  rating: number | null;
+  display_order: number;
+}
+
+export interface Project {
+  project_id: string;
+  user_id: string;
+  title: string;
+  short_description: string | null;
+  description: string | null;
+  thumbnail_url: string | null;
+  project_url: string | null;
+  source_code_url: string | null;
+  tech_stack: string | null;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectImage {
+  image_id: string;
+  project_id: string;
+  image_url: string;
+  caption: string | null;
+  display_order: number;
+}
+
+export interface BlogPost {
+  post_id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  slug: string;
+  published_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -101,7 +185,7 @@ export const useAppStore = create<AppState>()(
 
           const { user, token } = response.data;
 
-          set((state) => ({
+          set(() => ({
             authentication_state: {
               current_user: user,
               auth_token: token,
@@ -115,7 +199,7 @@ export const useAppStore = create<AppState>()(
         } catch (error: any) {
           const errorMessage = error.response?.data?.message || error.message || 'Login failed';
           
-          set((state) => ({
+          set(() => ({
             authentication_state: {
               current_user: null,
               auth_token: null,
@@ -165,7 +249,7 @@ export const useAppStore = create<AppState>()(
 
           const { user, token } = response.data;
 
-          set((state) => ({
+          set(() => ({
             authentication_state: {
               current_user: user,
               auth_token: token,
@@ -179,7 +263,7 @@ export const useAppStore = create<AppState>()(
         } catch (error: any) {
           const errorMessage = error.response?.data?.message || error.message || 'Registration failed';
           
-          set((state) => ({
+          set(() => ({
             authentication_state: {
               ...state.authentication_state,
               authentication_status: {
@@ -199,7 +283,7 @@ export const useAppStore = create<AppState>()(
         
         // If no token, we're definitely not authenticated
         if (!token) {
-          set((state) => ({
+          set(() => ({
             authentication_state: {
               ...state.authentication_state,
               authentication_status: {
@@ -220,7 +304,7 @@ export const useAppStore = create<AppState>()(
 
           const user = response.data;
           
-          set((state) => ({
+          set(() => ({
             authentication_state: {
               current_user: user,
               auth_token: token,
@@ -233,7 +317,7 @@ export const useAppStore = create<AppState>()(
           }));
         } catch (error) {
           // Token is invalid, clear auth state
-          set((state) => ({
+          set(() => ({
             authentication_state: {
               current_user: null,
               auth_token: null,

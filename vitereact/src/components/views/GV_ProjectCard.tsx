@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
 // Zod schemas for type safety (importing relevant types)
-import { projectSchema, projectImageSchema } from '@/db/zodSchemas';
+
 
 // Define TypeScript interfaces based on Zod schemas
 interface Project {

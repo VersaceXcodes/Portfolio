@@ -35,19 +35,7 @@ const LoadingSpinner: React.FC = () => (
   </div>
 );
 
-// Protected Route Wrapper (currently not needed but included for future-proofing)
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isAuthenticated = useAppStore(state => state.authentication_state.authentication_status.is_authenticated);
-  const isLoading = useAppStore(state => state.authentication_state.authentication_status.is_loading);
-  
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-  
-  // Currently all routes are public, so this just passes through
-  // In a real app, this would redirect to login if not authenticated
-  return <>{children}</>;
-};
+
 
 const App: React.FC = () => {
   const isLoading = useAppStore(state => state.authentication_state.authentication_status.is_loading);

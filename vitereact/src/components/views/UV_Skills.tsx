@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useAppStore } from '@/store/main';
-import { Skill } from '@/zodschemas';
+import { Skill } from '@/db/zodSchemas';
 
 const UV_Skills: React.FC = () => {
   // Global state selectors

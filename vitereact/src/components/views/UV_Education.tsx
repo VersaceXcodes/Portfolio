@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAppStore } from '@/store/main';
 import axios from 'axios';
-import { Education } from '@/DB/zodschemas';
+import { Education } from '@/db/zodSchemas';
 
 const UV_Education: React.FC = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);

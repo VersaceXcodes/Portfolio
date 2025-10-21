@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useAppStore } from '@/store/main';
-import { AppSetting } from '@/zodschemas';
+import { AppSetting } from '@/db/zodSchemas';
 
 const UV_Settings: React.FC = () => {
   // Global state selectors

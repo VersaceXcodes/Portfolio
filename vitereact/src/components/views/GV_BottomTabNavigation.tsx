@@ -97,8 +97,6 @@ const GV_BottomTabNavigation: React.FC = () => {
   // Fetch navigation preferences
   const {
     data: navigationPreferences,
-    isLoading: isLoadingPreferences,
-    isError: isPreferencesError,
   } = useQuery<NavigationPreferenceResponse[], Error>({
     queryKey: ['navigationPreferences', currentUser?.user_id],
     queryFn: async () => {

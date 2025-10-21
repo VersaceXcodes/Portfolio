@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useAppStore } from '@/store/main';
-import { appSettingSchema, type AppSetting } from '@/db/zodschemas';
+import { appSettingSchema, type AppSetting } from '@/db/zodSchemas';
 
 const GV_ScrollNavigationSidebar: React.FC = () => {
   // Zustand store state

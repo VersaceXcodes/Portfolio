@@ -91,26 +91,22 @@ const GV_Footer: React.FC = () => {
   const currentUser = useAppStore(state => state.authentication_state.current_user);
   
   // Fetch social media links
-  const { data: socialLinks, isLoading: socialLinksLoading, error: socialLinksError } = useQuery<SocialMediaLink[]>(
-    ['social-links'],
-    fetchSocialLinks,
-    {
-      staleTime: 1000 * 60 * 60, // 1 hour
-      refetchOnWindowFocus: false,
-      retry: 1
-    }
-  );
+  const { data: socialLinks, isLoading: socialLinksLoading, error: socialLinksError } = useQuery<SocialMediaLink[]>({
+    queryKey: ['social-links'],
+    queryFn: fetchSocialLinks,
+    staleTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false,
+    retry: 1
+  });
   
   // Fetch resume download
-  const { data: resumeDownload, isLoading: resumeLoading, error: resumeError } = useQuery<ResumeDownload | null>(
-    ['resume-download'],
-    fetchResumeDownload,
-    {
-      staleTime: 1000 * 60 * 60, // 1 hour
-      refetchOnWindowFocus: false,
-      retry: 1
-    }
-  );
+  const { data: resumeDownload, isLoading: resumeLoading, error: resumeError } = useQuery<ResumeDownload | null>({
+    queryKey: ['resume-download'],
+    queryFn: fetchResumeDownload,
+    staleTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false,
+    retry: 1
+  });
   
   // Generate copyright text
   const currentYear = new Date().getFullYear();
@@ -133,7 +129,7 @@ const GV_Footer: React.FC = () => {
                 </div>
               ) : socialLinksError ? (
                 <div className="text-red-500 text-sm">Failed to load social links</div>
-              ) : socialLinks && socialLinks.length > 0 ? (
+              ) : socialLinks && Array.isArray(socialLinks) && socialLinks.length > 0 ? (
                 socialLinks.map((link) => (
                   <a
                     key={link.link_id}
@@ -150,9 +146,9 @@ const GV_Footer: React.FC = () => {
             </div>
             
             <div className="mt-8 md:mt-0 md:order-1 flex flex-col items-center md:items-end">
-              {resumeDownload ? (
+              {resumeDownload && typeof resumeDownload === 'object' && 'download_url' in resumeDownload ? (
                 <a
-                  href={resumeDownload.download_url}
+                  href={resumeDownload.download_url as string}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"

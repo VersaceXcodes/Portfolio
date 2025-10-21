@@ -12,7 +12,7 @@ const UV_ProjectDetail: React.FC = () => {
   const { project_id } = useParams<{ project_id: string }>();
   
   // Get auth token from global state
-  const authToken = useAppStore(state => state.authentication_state.auth_token);
+  useAppStore(state => state.authentication_state.auth_token);
   
   // API base URL
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';

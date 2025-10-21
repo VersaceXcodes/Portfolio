@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/main';
 import axios from 'axios';
-import { createContactMessageInputSchema } from '@/DB/zodschemas';
+import { createContactMessageInputSchema } from '@/db/zodSchemas';
 
 const UV_ContactForm: React.FC = () => {
   // Global state

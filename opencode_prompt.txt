@@ -1,96 +1,128 @@
-VALIDATION FAILURE - Frontend TypeScript Compilation (Attempt 1/100)
+VALIDATION FAILURE - Frontend TypeScript Compilation (Attempt 2/100)
 
 The project validation failed at the "Frontend TypeScript Compilation" step. You need to analyze the error and fix it.
 
 ## Error Details:
-src/App.tsx(39,7): error TS6133: 'ProtectedRoute' is declared but its value is never read.
-src/App.tsx(40,9): error TS6133: 'isAuthenticated' is declared but its value is never read.
-src/components/views/GV_BottomTabNavigation.tsx(100,16): error TS6133: 'isLoadingPreferences' is declared but its value is never read.
-src/components/views/GV_BottomTabNavigation.tsx(101,14): error TS6133: 'isPreferencesError' is declared but its value is never read.
-src/components/views/GV_Footer.tsx(97,5): error TS2554: Expected 1-2 arguments, but got 3.
-src/components/views/GV_Footer.tsx(108,5): error TS2554: Expected 1-2 arguments, but got 3.
-src/components/views/GV_Footer.tsx(136,46): error TS2339: Property 'length' does not exist on type 'NonNullable<NoInfer<TQueryFnData>>'.
-src/components/views/GV_Footer.tsx(137,29): error TS2339: Property 'map' does not exist on type 'NonNullable<NoInfer<TQueryFnData>>'.
-src/components/views/GV_Footer.tsx(155,40): error TS2339: Property 'download_url' does not exist on type 'NonNullable<NoInfer<TQueryFnData>>'.
-src/components/views/GV_HeaderWithAvatar.tsx(6,39): error TS2307: Cannot find module '@/db/zodschemas' or its corresponding type declarations.
-src/components/views/GV_HeaderWithAvatar.tsx(116,20): error TS2339: Property 'user_id' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(123,95): error TS2339: Property 'user_id' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(127,111): error TS2339: Property 'user_id' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(195,38): error TS2339: Property 'header_image_url' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(196,31): error TS2339: Property 'header_image_url' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(203,23): error TS2339: Property 'avatar_url' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(212,22): error TS2339: Property 'avatar_url' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(214,29): error TS2339: Property 'avatar_url' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(215,32): error TS2339: Property 'name' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(228,24): error TS2339: Property 'name' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(232,22): error TS2339: Property 'tagline' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(234,25): error TS2339: Property 'tagline' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(249,24): error TS2339: Property 'email' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(251,42): error TS2339: Property 'email' does not exist on type 'UserData'.
-src/components/views/GV_HeaderWithAvatar.tsx(255,70): error TS2339: Property 'email' does not exist on type 'UserData'.
-src/components/views/GV_MoreInfoModal.tsx(5,31): error TS2307: Cannot find module '@/DB/zodschemas' or its corresponding type declarations.
-src/components/views/GV_MoreInfoModal.tsx(74,13): error TS6133: 'response' is declared but its value is never read.
-src/components/views/GV_ProjectCard.tsx(7,1): error TS6192: All imports in import declaration are unused.
-src/components/views/GV_ProjectCard.tsx(7,51): error TS2307: Cannot find module '@/db/zodSchemas' or its corresponding type declarations.
 src/components/views/GV_ProjectCard.tsx(33,42): error TS6133: 'error' is declared but its value is never read.
-src/components/views/GV_ScrollNavigationSidebar.tsx(5,51): error TS2307: Cannot find module '@/db/zodschemas' or its corresponding type declarations.
 src/components/views/GV_ScrollNavigationSidebar.tsx(82,41): error TS6133: 'isError' is declared but its value is never read.
 src/components/views/GV_ScrollNavigationSidebar.tsx(82,50): error TS6133: 'error' is declared but its value is never read.
-src/components/views/UV_About.tsx(1,17): error TS6133: 'useEffect' is declared but its value is never read.
-src/components/views/UV_About.tsx(7,3): error TS2459: Module '"@/store/main"' declares 'User' locally, but it is not exported.
-src/components/views/UV_About.tsx(8,3): error TS2305: Module '"@/store/main"' has no exported member 'Experience'.
-src/components/views/UV_About.tsx(9,3): error TS2305: Module '"@/store/main"' has no exported member 'Education'.
-src/components/views/UV_About.tsx(10,3): error TS2305: Module '"@/store/main"' has no exported member 'Certification'.
-src/components/views/UV_About.tsx(11,3): error TS2305: Module '"@/store/main"' has no exported member 'Testimonial'.
-src/components/views/UV_AboutMe.tsx(5,22): error TS2307: Cannot find module '@/DB/zodschemas' or its corresponding type declarations.
-src/components/views/UV_BlogFeed.tsx(5,1): error TS6133: 'Link' is declared but its value is never read.
-src/components/views/UV_BlogFeed.tsx(6,10): error TS2305: Module '"@/store/main"' has no exported member 'BlogPost'.
-src/components/views/UV_BlogFeed.tsx(31,5): error TS2769: No overload matches this call.
-  Overload 1 of 3, '(options: DefinedInitialDataOptions<unknown, Error, unknown, any[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<unknown, Error>', gave the following error.
-    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'DefinedInitialDataOptions<unknown, Error, unknown, any[]>'.
-  Overload 2 of 3, '(options: UndefinedInitialDataOptions<any, Error, any, any[]>, queryClient?: QueryClient | undefined): UseQueryResult<any, Error>', gave the following error.
-    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'UndefinedInitialDataOptions<any, Error, any, any[]>'.
-  Overload 3 of 3, '(options: UseQueryOptions<any, Error, any, any[]>, queryClient?: QueryClient | undefined): UseQueryResult<any, Error>', gave the following error.
-    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'UseQueryOptions<any, Error, any, any[]>'.
-src/components/views/UV_BlogFeed.tsx(37,39): error TS2339: Property 'posts' does not exist on type '{}'.
-src/components/views/UV_BlogFeed.tsx(38,28): error TS2339: Property 'total' does not exist on type '{}'.
-src/components/views/UV_Contact.tsx(105,9): error TS6133: 'clearMessages' is declared but its value is never read.
-src/components/views/UV_ContactForm.tsx(4,49): error TS2307: Cannot find module '@/DB/zodschemas' or its corresponding type declarations.
-src/components/views/UV_Education.tsx(5,27): error TS2307: Cannot find module '@/DB/zodschemas' or its corresponding type declarations.
-src/components/views/UV_Experience.tsx(6,28): error TS2307: Cannot find module '@/DB/zodschemas' or its corresponding type declarations.
-src/components/views/UV_ExperienceTimeline.tsx(5,10): error TS2305: Module '"@/store/main"' has no exported member 'Experience'.
-src/components/views/UV_Landing.tsx(6,40): error TS2307: Cannot find module '@/types/zodSchemas' or its corresponding type declarations.
+src/components/views/GV_TopNav.tsx(10,55): error TS2339: Property 'active_nav_section' does not exist on type 'AppState'.
+src/components/views/GV_TopNav.tsx(11,55): error TS2339: Property 'is_mobile_menu_open' does not exist on type 'AppState'.
+src/components/views/GV_TopNav.tsx(12,55): error TS2339: Property 'toggle_mobile_menu' does not exist on type 'AppState'.
+src/components/views/GV_TopNav.tsx(13,54): error TS2339: Property 'close_mobile_menu' does not exist on type 'AppState'.
+src/components/views/GV_TopNav.tsx(14,58): error TS2339: Property 'set_active_nav_section' does not exist on type 'AppState'.
+src/components/views/GV_TopNav.tsx(15,53): error TS2339: Property 'resume_download' does not exist on type 'AppState'.
+src/components/views/GV_TopNav.tsx(129,32): error TS2339: Property 'profile_image_url' does not exist on type 'User'.
+src/components/views/GV_TopNav.tsx(131,40): error TS2339: Property 'profile_image_url' does not exist on type 'User'.
+src/components/views/GV_TopNav.tsx(195,34): error TS2339: Property 'profile_image_url' does not exist on type 'User'.
+src/components/views/GV_TopNav.tsx(197,42): error TS2339: Property 'profile_image_url' does not exist on type 'User'.
+src/components/views/UV_About.tsx(163,26): error TS2339: Property 'profile_image_url' does not exist on type 'User'.
+src/components/views/UV_About.tsx(165,33): error TS2339: Property 'profile_image_url' does not exist on type 'User'.
+src/components/views/UV_About.tsx(177,26): error TS2339: Property 'professional_title' does not exist on type 'User'.
+src/components/views/UV_About.tsx(184,24): error TS2339: Property 'bio' does not exist on type 'User'.
+src/components/views/UV_About.tsx(186,27): error TS2339: Property 'bio' does not exist on type 'User'.
+src/components/views/UV_About.tsx(226,78): error TS2339: Property 'job_title' does not exist on type 'Experience'.
+src/components/views/UV_About.tsx(241,26): error TS2339: Property 'technologies_used' does not exist on type 'Experience'.
+src/components/views/UV_About.tsx(243,30): error TS2339: Property 'technologies_used' does not exist on type 'Experience'.
+src/components/views/UV_About.tsx(281,28): error TS2339: Property 'field_of_study' does not exist on type 'Education'.
+src/components/views/UV_About.tsx(282,71): error TS2339: Property 'field_of_study' does not exist on type 'Education'.
+src/components/views/UV_About.tsx(312,29): error TS2551: Property 'expiration_date' does not exist on type 'Certification'. Did you mean 'expiry_date'?
+src/components/views/UV_About.tsx(314,51): error TS2551: Property 'expiration_date' does not exist on type 'Certification'. Did you mean 'expiry_date'?
+src/components/views/UV_About.tsx(349,36): error TS2339: Property 'client_photo_url' does not exist on type 'Testimonial'.
+src/components/views/UV_About.tsx(351,44): error TS2339: Property 'client_photo_url' does not exist on type 'Testimonial'.
+src/components/views/UV_About.tsx(352,44): error TS2339: Property 'client_name' does not exist on type 'Testimonial'.
+src/components/views/UV_About.tsx(359,78): error TS2339: Property 'client_name' does not exist on type 'Testimonial'.
+src/components/views/UV_About.tsx(360,38): error TS2339: Property 'client_position' does not exist on type 'Testimonial'.
+src/components/views/UV_About.tsx(361,77): error TS2339: Property 'client_position' does not exist on type 'Testimonial'.
+src/components/views/UV_About.tsx(363,38): error TS2339: Property 'company_name' does not exist on type 'Testimonial'.
+src/components/views/UV_About.tsx(364,77): error TS2339: Property 'company_name' does not exist on type 'Testimonial'.
+src/components/views/UV_About.tsx(374,55): error TS18047: 'testimonial.rating' is possibly 'null'.
+src/components/views/UV_AboutMe.tsx(136,38): error TS2345: Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/components/views/UV_BlogFeed.tsx(95,31): error TS2339: Property 'read_time_minutes' does not exist on type 'BlogPost'.
+src/components/views/UV_BlogFeed.tsx(96,39): error TS2339: Property 'read_time_minutes' does not exist on type 'BlogPost'.
+src/components/views/UV_BlogFeed.tsx(111,29): error TS2339: Property 'excerpt' does not exist on type 'BlogPost'.
+src/components/views/UV_BlogFeed.tsx(113,33): error TS2339: Property 'excerpt' does not exist on type 'BlogPost'.
+src/components/views/UV_BlogFeed.tsx(117,29): error TS2339: Property 'tags' does not exist on type 'BlogPost'.
+src/components/views/UV_BlogFeed.tsx(119,33): error TS2339: Property 'tags' does not exist on type 'BlogPost'.
+src/components/views/UV_Contact.tsx(22,56): error TS2339: Property 'contact_form_status' does not exist on type 'AppState'.
+src/components/views/UV_Contact.tsx(23,59): error TS2339: Property 'set_contact_form_status' does not exist on type 'AppState'.
+src/components/views/UV_Contact.tsx(24,59): error TS2339: Property 'submit_contact_message' does not exist on type 'AppState'.
+src/components/views/UV_Contact.tsx(290,33): error TS2339: Property 'phone_number' does not exist on type 'User'.
+src/components/views/UV_Contact.tsx(301,54): error TS2339: Property 'phone_number' does not exist on type 'User'.
+src/components/views/UV_Contact.tsx(304,42): error TS2339: Property 'phone_number' does not exist on type 'User'.
+src/components/views/UV_Contact.tsx(312,33): error TS2339: Property 'linkedin_url' does not exist on type 'User'.
+src/components/views/UV_Contact.tsx(323,47): error TS2339: Property 'linkedin_url' does not exist on type 'User'.
+src/components/views/UV_Dashboard.tsx(60,61): error TS2339: Property 'id' does not exist on type 'User'.
+src/components/views/UV_DownloadResume.tsx(8,53): error TS2339: Property 'resume_download' does not exist on type 'AppState'.
+src/components/views/UV_DownloadResume.tsx(9,48): error TS2339: Property 'is_loading' does not exist on type 'AppState'.
+src/components/views/UV_DownloadResume.tsx(10,44): error TS2339: Property 'errors' does not exist on type 'AppState'.
+src/components/views/UV_DownloadResume.tsx(11,58): error TS2339: Property 'fetch_resume_download' does not exist on type 'AppState'.
+src/components/views/UV_ErrorPage.tsx(11,51): error TS2339: Property 'site_settings' does not exist on type 'AppState'.
+src/components/views/UV_ExperienceTimeline.tsx(130,40): error TS2339: Property 'company_website_url' does not exist on type 'Experience'.
+src/components/views/UV_ExperienceTimeline.tsx(132,49): error TS2339: Property 'company_website_url' does not exist on type 'Experience'.
+src/components/views/UV_ExperienceTimeline.tsx(142,80): error TS2339: Property 'job_title' does not exist on type 'Experience'.
+src/components/views/UV_ExperienceTimeline.tsx(188,34): error TS2339: Property 'achievements' does not exist on type 'Experience'.
+src/components/views/UV_ExperienceTimeline.tsx(192,40): error TS2339: Property 'achievements' does not exist on type 'Experience'.
+src/components/views/UV_ExperienceTimeline.tsx(198,34): error TS2339: Property 'technologies_used' does not exist on type 'Experience'.
+src/components/views/UV_ExperienceTimeline.tsx(202,40): error TS2339: Property 'technologies_used' does not exist on type 'Experience'.
 src/components/views/UV_Landing.tsx(207,16): error TS2352: Conversion of type 'Error | null' to type 'string' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
   Type 'Error' is not comparable to type 'string'.
-src/components/views/UV_PrivacyPolicy.tsx(1,17): error TS6133: 'useEffect' is declared but its value is never read.
-src/components/views/UV_ProjectDetail.tsx(8,15): error TS2305: Module '"@/store/main"' has no exported member 'Project'.
-src/components/views/UV_ProjectDetail.tsx(8,24): error TS2305: Module '"@/store/main"' has no exported member 'ProjectImage'.
-src/components/views/UV_ProjectDetail.tsx(15,9): error TS6133: 'authToken' is declared but its value is never read.
-src/components/views/UV_ProjectList.tsx(6,10): error TS2305: Module '"@/store/main"' has no exported member 'Project'.
-src/components/views/UV_Projects.tsx(6,25): error TS2307: Cannot find module '@/db/zodschemas' or its corresponding type declarations.
-src/components/views/UV_Settings.tsx(5,28): error TS2307: Cannot find module '@/zodschemas' or its corresponding type declarations.
-src/components/views/UV_Skills.tsx(5,23): error TS2307: Cannot find module '@/zodschemas' or its corresponding type declarations.
-src/store/main.tsx(1,24): error TS2307: Cannot find module 'zustand' or its corresponding type declarations.
-src/store/main.tsx(2,25): error TS2307: Cannot find module 'zustand/middleware' or its corresponding type declarations.
-src/store/main.tsx(104,16): error TS6133: 'state' is declared but its value is never read.
-src/store/main.tsx(118,16): error TS6133: 'state' is declared but its value is never read.
-src/store/main.tsx(134,14): error TS6133: 'state' is declared but its value is never read.
-src/store/main.tsx(168,16): error TS6133: 'state' is declared but its value is never read.
-src/store/main.tsx(223,16): error TS6133: 'state' is declared but its value is never read.
-src/store/main.tsx(236,16): error TS6133: 'state' is declared but its value is never read.
-src/store/main.tsx(260,14): error TS6133: 'state' is declared but its value is never read.
-src/store/main.tsx(268,14): error TS6133: 'state' is declared but its value is never read.
-src/store/main.tsx(276,14): error TS6133: 'state' is declared but its value is never read.
+src/components/views/UV_Landing.tsx(249,28): error TS2345: Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/components/views/UV_ProjectDetail.tsx(118,30): error TS2339: Property 'project_type' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(120,34): error TS2339: Property 'project_type' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(126,30): error TS2339: Property 'status' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(128,33): error TS2339: Property 'status' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(130,37): error TS2339: Property 'status' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(134,34): error TS2339: Property 'status' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(134,75): error TS2339: Property 'status' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(140,26): error TS2339: Property 'role_in_project' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(142,76): error TS2339: Property 'role_in_project' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(156,38): error TS2339: Property 'alt_text' does not exist on type 'ProjectImage'.
+src/components/views/UV_ProjectDetail.tsx(173,46): error TS2322: Type 'string | null' is not assignable to type 'string | TrustedHTML'.
+  Type 'null' is not assignable to type 'string | TrustedHTML'.
+src/components/views/UV_ProjectDetail.tsx(178,24): error TS2339: Property 'problem_statement' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(183,64): error TS2339: Property 'problem_statement' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(189,24): error TS2339: Property 'solution_approach' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(194,64): error TS2339: Property 'solution_approach' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(200,24): error TS2339: Property 'technical_challenges' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(205,64): error TS2339: Property 'technical_challenges' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(211,24): error TS2339: Property 'technologies_used' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(216,64): error TS2339: Property 'technologies_used' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(225,28): error TS2339: Property 'live_demo_url' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(227,37): error TS2339: Property 'live_demo_url' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(239,28): error TS2339: Property 'github_repo_url' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(241,37): error TS2339: Property 'github_repo_url' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(253,28): error TS2339: Property 'app_store_url' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(255,37): error TS2339: Property 'app_store_url' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(267,28): error TS2339: Property 'play_store_url' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(269,37): error TS2339: Property 'play_store_url' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(281,28): error TS2339: Property 'case_study_url' does not exist on type 'Project'.
+src/components/views/UV_ProjectDetail.tsx(283,37): error TS2339: Property 'case_study_url' does not exist on type 'Project'.
+src/components/views/UV_ProjectList.tsx(138,38): error TS2339: Property 'technologies_used' does not exist on type 'Project'.
+src/components/views/UV_ProjectList.tsx(140,42): error TS2339: Property 'technologies_used' does not exist on type 'Project'.
+src/components/views/UV_ProjectList.tsx(156,41): error TS2339: Property 'status' does not exist on type 'Project'.
+src/components/views/UV_ProjectList.tsx(158,45): error TS2339: Property 'status' does not exist on type 'Project'.
+src/components/views/UV_ProjectList.tsx(162,42): error TS2339: Property 'status' does not exist on type 'Project'.
+src/store/main.tsx(218,14): error TS6133: 'state' is declared but its value is never read.
+src/store/main.tsx(268,18): error TS2304: Cannot find name 'state'.
+src/store/main.tsx(270,20): error TS2304: Cannot find name 'state'.
+src/store/main.tsx(288,18): error TS2304: Cannot find name 'state'.
+src/store/main.tsx(290,20): error TS2304: Cannot find name 'state'.
+src/store/main.tsx(344,14): error TS6133: 'state' is declared but its value is never read.
+src/store/main.tsx(352,14): error TS6133: 'state' is declared but its value is never read.
+src/store/main.tsx(360,14): error TS6133: 'state' is declared but its value is never read.
 
 
 ## Validation Context:
 - Step: Frontend TypeScript Compilation
 - Working Directory: /app/vitereact
-- Attempt: 1/100
-- Previous failures for this step: 1
+- Attempt: 2/100
+- Previous failures for this step: 2
 
 ## Project Memory Summary:
-- Total validation attempts: 5
+- Total validation attempts: 6
 - Common issues encountered: None
 - Known dependencies: @hookform/resolvers, @radix-ui/react-accordion, @radix-ui/react-alert-dialog, @radix-ui/react-aspect-ratio, @radix-ui/react-avatar, @radix-ui/react-checkbox, @radix-ui/react-collapsible, @radix-ui/react-context-menu, @radix-ui/react-dialog, @radix-ui/react-dropdown-menu
 - Missing dependencies: None
@@ -210,6 +242,7 @@ PROTECTED DIRECTORIES (DO NOT MODIFY):
 
 ## Previous Validation Failures for Frontend TypeScript Compilation:
 - 8:33:23 AM: 
+- 8:37:19 AM: 
 
 ## Your Task:
 1. **Analyze the Error**: Understand what specifically went wrong in the Frontend TypeScript Compilation step

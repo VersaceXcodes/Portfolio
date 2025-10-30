@@ -160,9 +160,9 @@ const UV_About: React.FC = () => {
               {/* Profile Image */}
               <div className="md:w-1/3 p-8 flex flex-col items-center justify-center">
                 <div className="rounded-full overflow-hidden w-48 h-48 md:w-64 md:h-64">
-                  {user?.profile_image_url ? (
+                  {user?.avatar_url ? (
                     <img 
-                      src={user.profile_image_url} 
+                      src={user.avatar_url} 
                       alt={user.name} 
                       className="w-full h-full object-cover"
                     />
@@ -174,16 +174,16 @@ const UV_About: React.FC = () => {
                 </div>
                 <h2 className="mt-6 text-2xl font-bold text-gray-900">{user?.name}</h2>
                 <p className="text-blue-600 font-medium">
-                  {user?.professional_title || "React Native Developer"}
+                  {user?.tagline || "React Native Developer"}
                 </p>
               </div>
 
               {/* Bio Content */}
               <div className="md:w-2/3 p-8 border-t md:border-t-0 md:border-l border-gray-100">
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">My Story</h3>
-                {user?.bio ? (
+                {user?.bio_text ? (
                   <div className="prose max-w-none text-gray-600">
-                    {user.bio.split('\n').map((paragraph, index) => (
+                    {user.bio_text.split('\n').map((paragraph, index) => (
                       <p key={index} className="mb-4">{paragraph}</p>
                     ))}
                   </div>
@@ -223,7 +223,7 @@ const UV_About: React.FC = () => {
                   >
                     <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900">{exp.job_title}</h3>
+                        <h3 className="text-xl font-bold text-gray-900">{exp.role_title}</h3>
                         <p className="text-lg text-blue-600">{exp.company_name}</p>
                       </div>
                       <div className="mt-2 md:mt-0">
@@ -238,9 +238,9 @@ const UV_About: React.FC = () => {
                     {exp.description && (
                       <p className="text-gray-600 mb-4">{exp.description}</p>
                     )}
-                    {exp.technologies_used && (
+                    {exp.description && (
                       <div className="flex flex-wrap gap-2">
-                        {exp.technologies_used.split(',').map((tech, index) => (
+                        {exp.description.split(',').map((tech, index) => (
                           <span 
                             key={index}
                             className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm"
@@ -278,8 +278,8 @@ const UV_About: React.FC = () => {
                         {new Date(edu.start_date).getFullYear()}
                         {edu.end_date && ` - ${new Date(edu.end_date).getFullYear()}`}
                       </p>
-                      {edu.field_of_study && (
-                        <p className="text-gray-600 mt-2">Field: {edu.field_of_study}</p>
+                      {edu.degree && (
+                        <p className="text-gray-600 mt-2">Field: {edu.degree}</p>
                       )}
                       {edu.description && (
                         <p className="text-gray-600 mt-3">{edu.description}</p>
@@ -309,9 +309,9 @@ const UV_About: React.FC = () => {
                       <p className="text-gray-600 mt-2">
                         Issued: {new Date(cert.issue_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                       </p>
-                      {cert.expiration_date && (
-                        <p className="text-gray-600 mt-1">
-                          Expires: {new Date(cert.expiration_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                      {cert.expiry_date && (
+                        <p className="text-gray-600 text-sm">
+                          Expires: {new Date(cert.expiry_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                         </p>
                       )}
                       {cert.credential_url && (
@@ -346,22 +346,16 @@ const UV_About: React.FC = () => {
                     className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
                   >
                     <div className="flex items-center mb-4">
-                      {testimonial.client_photo_url ? (
-                        <img 
-                          src={testimonial.client_photo_url} 
-                          alt={testimonial.client_name} 
-                          className="w-12 h-12 rounded-full mr-4"
-                        />
-                      ) : (
-                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-12 h-12 mr-4"></div>
-                      )}
+                      <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold mr-4">
+                        {testimonial.author_name.charAt(0)}
+                      </div>
                       <div>
-                        <h3 className="font-bold text-gray-900">{testimonial.client_name}</h3>
-                        {testimonial.client_position && (
-                          <p className="text-gray-600 text-sm">{testimonial.client_position}</p>
+                        <h3 className="font-bold text-gray-900">{testimonial.author_name}</h3>
+                        {testimonial.author_title && (
+                          <p className="text-gray-600 text-sm">{testimonial.author_title}</p>
                         )}
-                        {testimonial.company_name && (
-                          <p className="text-gray-600 text-sm">{testimonial.company_name}</p>
+                        {testimonial.author_company && (
+                          <p className="text-gray-600 text-sm">{testimonial.author_company}</p>
                         )}
                       </div>
                     </div>
@@ -371,7 +365,7 @@ const UV_About: React.FC = () => {
                         {[...Array(5)].map((_, i) => (
                           <svg
                             key={i}
-                            className={`w-5 h-5 ${i < testimonial.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                            className={`w-5 h-5 ${i < (testimonial.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >

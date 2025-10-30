@@ -139,7 +139,7 @@ const UV_ExperienceTimeline: React.FC = () => {
                                   )}
                                 </div>
                                 
-                                <p className="text-lg text-gray-700 mt-1">{exp.job_title}</p>
+                                 <p className="text-lg text-gray-700 mt-1">{exp.role_title}</p>
                               </div>
                             </div>
                             
@@ -182,33 +182,6 @@ const UV_ExperienceTimeline: React.FC = () => {
                               <p className="text-gray-700 mb-4 whitespace-pre-line">
                                 {exp.description}
                               </p>
-                            )}
-                            
-                            {/* Achievements */}
-                            {exp.achievements && (
-                              <div className="mb-4">
-                                <h4 className="font-semibold text-gray-900 mb-2">Key Achievements:</h4>
-                                <p className="text-gray-700 whitespace-pre-line">
-                                  {exp.achievements}
-                                </p>
-                              </div>
-                            )}
-                            
-                            {/* Technologies */}
-                            {exp.technologies_used && (
-                              <div>
-                                <h4 className="font-semibold text-gray-900 mb-2">Technologies Used:</h4>
-                                <div className="flex flex-wrap gap-2">
-                                  {exp.technologies_used.split(',').map((tech, idx) => (
-                                    <span 
-                                      key={idx} 
-                                      className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full"
-                                    >
-                                      {tech.trim()}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
                             )}
                           </div>
                         </div>

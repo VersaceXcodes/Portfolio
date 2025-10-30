@@ -39,7 +39,7 @@ const GV_TopNav: React.FC = () => {
 
   // Close mobile menu when location changes
   useEffect(() => {
-    closeMobileMenu();
+    closeMobileMenu?.();
   }, [location, closeMobileMenu]);
 
   // Determine active section based on pathname
@@ -54,14 +54,14 @@ const GV_TopNav: React.FC = () => {
     };
     
     const section = pathToSectionMap[location.pathname] || 'home';
-    setActiveNavSection(section);
+    setActiveNavSection?.(section);
   }, [location.pathname, setActiveNavSection]);
 
   // Handle escape key to close mobile menu
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isMobileMenuOpen) {
-        closeMobileMenu();
+        closeMobileMenu?.();
       }
     };
     

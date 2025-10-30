@@ -79,7 +79,7 @@ const GV_ScrollNavigationSidebar: React.FC = () => {
   };
 
   // Queries and mutations
-  const { data: appSettings, isLoading, isError, error } = useQuery({
+  const { data: appSettings, isLoading } = useQuery({
     queryKey: ['app-settings', currentUser?.user_id],
     queryFn: fetchAppSettings,
     enabled: !!currentUser?.user_id && !!authToken && isOpen,

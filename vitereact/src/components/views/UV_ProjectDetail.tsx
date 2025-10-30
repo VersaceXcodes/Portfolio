@@ -170,7 +170,7 @@ const UV_ProjectDetail: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Description</h2>
                 <div 
                   className="prose max-w-none text-gray-700"
-                  dangerouslySetInnerHTML={{ __html: project.description }}
+                  dangerouslySetInnerHTML={{ __html: project.description || '' }}
                 />
               </div>
 
@@ -208,13 +208,12 @@ const UV_ProjectDetail: React.FC = () => {
               )}
 
               {/* Technologies used */}
-              {project.technologies_used && (
+              {project.tech_stack && (
                 <div className="p-6 border-b border-gray-200">
                   <h2 className="text-xl font-semibold text-gray-900 mb-4">Technologies Used</h2>
-                  <div 
-                    className="prose max-w-none text-gray-700"
-                    dangerouslySetInnerHTML={{ __html: project.technologies_used }}
-                  />
+                  <div className="prose max-w-none text-gray-700">
+                    {project.tech_stack}
+                  </div>
                 </div>
               )}
 

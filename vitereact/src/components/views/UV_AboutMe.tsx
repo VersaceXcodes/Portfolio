@@ -81,7 +81,7 @@ const UV_AboutMe: React.FC = () => {
   });
 
   // Render bio content with basic formatting
-  const renderBioContent = (content: string | null) => {
+  const renderBioContent = (content: string | null | undefined) => {
     if (!content) return null;
     
     return content.split('\n').map((paragraph, index) => (

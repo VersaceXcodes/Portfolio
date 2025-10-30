@@ -135,9 +135,9 @@ const UV_ProjectList: React.FC = () => {
                             <p className="text-gray-600 mb-4 line-clamp-3">{project.description}</p>
                             
                             {/* Technologies tags */}
-                            {project.technologies_used && (
+                            {project.tech_stack && (
                               <div className="flex flex-wrap gap-2 mb-4">
-                                {project.technologies_used.split(',').map((tech, index) => (
+                                {project.tech_stack.split(',').map((tech, index) => (
                                   <span 
                                     key={index} 
                                     className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full"

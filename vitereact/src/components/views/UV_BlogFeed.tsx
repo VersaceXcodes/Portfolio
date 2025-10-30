@@ -114,14 +114,14 @@ const UV_BlogFeed: React.FC = () => {
                         </p>
                       )}
                       
-                      {post.tags && (
+                      {post.tags && Array.isArray(post.tags) && (
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {post.tags.split(',').map((tag, index) => (
+                          {post.tags.map((tag, index) => (
                             <span 
                               key={index} 
                               className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full"
                             >
-                              {tag.trim()}
+                              {tag}
                             </span>
                           ))}
                         </div>

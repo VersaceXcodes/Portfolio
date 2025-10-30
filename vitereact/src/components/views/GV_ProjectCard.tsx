@@ -30,7 +30,7 @@ interface GV_ProjectCardProps {
 
 const GV_ProjectCard: React.FC<GV_ProjectCardProps> = ({ project }) => {
   // Fetch project image using react-query
-  const { data: projectImage, isLoading, error } = useQuery<ProjectImage | null>({
+  const { data: projectImage, isLoading } = useQuery<ProjectImage | null>({
     queryKey: ['projectImage', project.project_id],
     queryFn: async () => {
       try {
@@ -52,7 +52,7 @@ const GV_ProjectCard: React.FC<GV_ProjectCardProps> = ({ project }) => {
         }
         
         return null;
-      } catch (err) {
+      } catch {
         // If there's an error fetching images, we'll just render without an image
         return null;
       }

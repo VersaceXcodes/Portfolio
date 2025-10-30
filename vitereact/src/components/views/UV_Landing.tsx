@@ -135,7 +135,7 @@ const UV_Landing: React.FC = () => {
     enabled: !!currentUser?.user_id
   });
   
-  // Mock social media links (would come from API in real implementation)
+  // Default social media links
   const socialLinks: SocialMediaLink[] = [
     { platform: 'github', url: '#' },
     { platform: 'linkedin', url: '#' },
@@ -180,7 +180,7 @@ const UV_Landing: React.FC = () => {
   };
   
   // Helper function to format tagline
-  const formatTagline = (tagline: string | null) => {
+  const formatTagline = (tagline: string | null | undefined) => {
     if (!tagline) return 'Professional Portfolio';
     return tagline;
   };
@@ -204,7 +204,7 @@ const UV_Landing: React.FC = () => {
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md max-w-md">
             <p className="font-medium">Error loading content</p>
             <p className="text-sm mt-1">
-              {(userError || projectsError || keyFactsError) as string}
+              {String(userError?.message || projectsError?.message || keyFactsError?.message || 'Unknown error')}
             </p>
           </div>
         </div>

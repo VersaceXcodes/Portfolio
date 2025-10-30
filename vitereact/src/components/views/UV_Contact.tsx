@@ -35,8 +35,8 @@ const UV_Contact: React.FC = () => {
     }
     
     // Clear submit errors when user types
-    if (contactFormStatus.error_message) {
-      setContactFormStatus({ error_message: null });
+    if (contactFormStatus?.error_message) {
+      setContactFormStatus?.({ error_message: null });
     }
   };
   
@@ -81,7 +81,7 @@ const UV_Contact: React.FC = () => {
     
     try {
       // Submit contact message
-      await submitContactMessage({
+      await submitContactMessage?.({
         name: formData.name,
         email: formData.email,
         subject: formData.subject || null,
@@ -121,17 +121,17 @@ const UV_Contact: React.FC = () => {
               <div className="p-6 sm:p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Send me a message</h2>
                 
-                {(contactFormStatus.success_message || contactFormStatus.error_message) && (
+                {(contactFormStatus?.success_message || contactFormStatus?.error_message) && (
                   <div 
                     className={`mb-6 p-4 rounded-lg ${
-                      contactFormStatus.success_message 
+                      contactFormStatus?.success_message 
                         ? 'bg-green-50 text-green-800 border border-green-200' 
                         : 'bg-red-50 text-red-800 border border-red-200'
                     }`}
                     aria-live="polite"
                   >
                     <p className="text-sm">
-                      {contactFormStatus.success_message || contactFormStatus.error_message}
+                      {contactFormStatus?.success_message || contactFormStatus?.error_message}
                     </p>
                   </div>
                 )}
@@ -150,7 +150,7 @@ const UV_Contact: React.FC = () => {
                         value={formData.name}
                         onChange={handleInputChange}
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
-                          formErrors.name || contactFormStatus.error_message?.includes('name')
+                          formErrors.name || contactFormStatus?.error_message?.includes('name')
                             ? 'border-red-300 bg-red-50'
                             : 'border-gray-300'
                         }`}
@@ -177,7 +177,7 @@ const UV_Contact: React.FC = () => {
                         value={formData.email}
                         onChange={handleInputChange}
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
-                          formErrors.email || contactFormStatus.error_message?.includes('email')
+                          formErrors.email || contactFormStatus?.error_message?.includes('email')
                             ? 'border-red-300 bg-red-50'
                             : 'border-gray-300'
                         }`}
@@ -220,7 +220,7 @@ const UV_Contact: React.FC = () => {
                         value={formData.message}
                         onChange={handleInputChange}
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
-                          formErrors.message || contactFormStatus.error_message?.includes('message')
+                          formErrors.message || contactFormStatus?.error_message?.includes('message')
                             ? 'border-red-300 bg-red-50'
                             : 'border-gray-300'
                         }`}
@@ -239,10 +239,10 @@ const UV_Contact: React.FC = () => {
                     <div>
                       <button
                         type="submit"
-                        disabled={contactFormStatus.is_submitting}
+                        disabled={contactFormStatus?.is_submitting}
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
                       >
-                        {contactFormStatus.is_submitting ? (
+                        {contactFormStatus?.is_submitting ? (
                           <>
                             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

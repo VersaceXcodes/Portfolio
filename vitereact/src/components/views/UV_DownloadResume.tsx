@@ -6,14 +6,14 @@ const UV_DownloadResume: React.FC = () => {
   // Access global state
   const currentUser = useAppStore(state => state.authentication_state.current_user);
   const resumeDownload = useAppStore(state => state.resume_download);
-  const isLoading = useAppStore(state => state.is_loading.resume);
-  const error = useAppStore(state => state.errors.resume);
+  const isLoading = useAppStore(state => state.is_loading?.resume);
+  const error = useAppStore(state => state.errors?.resume);
   const fetchResumeDownload = useAppStore(state => state.fetch_resume_download);
 
   // Fetch resume download link on component mount
   useEffect(() => {
     if (currentUser?.user_id) {
-      fetchResumeDownload();
+      fetchResumeDownload?.();
     }
   }, [currentUser?.user_id, fetchResumeDownload]);
 
